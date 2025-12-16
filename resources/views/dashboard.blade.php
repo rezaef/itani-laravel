@@ -1,0 +1,440 @@
+@extends('layouts.app')
+
+@section('title','ITani — Dashboard')
+
+@section('top-right')
+  <span class="chip" id="mqttStatus"><span class="dot off"></span> Disconnected</span>
+@endsection
+
+@section('head')
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+
+  <style>
+    .sensor-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; }
+    .sensor{
+      background: linear-gradient(135deg, rgba(2,6,23,.92), rgba(15,23,42,.92));
+      border: 1px solid rgba(148,163,184,.25);
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: 0 14px 30px rgba(0,0,0,.18);
+      color:#e5e7eb;
+    }
+    [data-theme="dark"] .sensor{ background: linear-gradient(135deg, rgba(2,6,23,.70), rgba(15,23,42,.70)); }
+    .sensor.ok{ border-color:#16a34a; }
+    .sensor.warn{ border-color:#facc15; }
+    .sensor h3{ font-size:.95rem; margin:0 0 6px; opacity:.95; display:flex; gap:.55rem; align-items:center; }
+    .sensor .val{ font-size:1.75rem; font-weight:900; line-height:1.05; margin:0; }
+    .sensor .unit{ font-size:.9rem; opacity:.8; margin-left:6px; }
+    .sensor .lbl{ font-size:.82rem; opacity:.85; margin:6px 0 0; }
+
+    .chart-wrap{ height: 280px; }
+    .logbox{ max-height: 290px; overflow:auto; }
+    .logitem{ border-bottom: 1px solid var(--border); padding:.7rem 0; }
+    .tag{
+      border-radius: 999px; font-size:.72rem; font-weight:900;
+      padding:.12rem .55rem; border: 1px solid var(--border);
+    }
+    .tag.manual{ background: rgba(59,130,246,.12); color: #1d4ed8; }
+    .tag.otomatis{ background: rgba(34,197,94,.14); color: #166534; }
+  </style>
+@endsection
+
+@section('content')
+  <div class="mb-3">
+    <h3 class="fw-bold mb-1">Dashboard Monitoring Okra Merah</h3>
+    <div class="muted">Pantau kondisi tanah, kontrol pompa, dan lihat riwayat penyiraman dalam satu halaman.</div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="mb-3">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h5 class="fw-bold mb-0">Monitoring Sensor Tanah 7-in-1</h5>
+          <small class="muted" id="lastUpdate">Last update: –</small>
+        </div>
+
+        <div class="sensor-grid">
+          <div class="sensor" id="card-temp">
+            <h3><i class="bi bi-thermometer-half"></i> Suhu</h3>
+            <p class="val"><span id="tempNumber">--</span> <span class="unit">°C</span></p>
+            <p class="lbl" id="tempLabel">Menunggu data...</p>
+          </div>
+
+          <div class="sensor" id="card-humi">
+            <h3><i class="bi bi-droplet"></i> Kelembapan</h3>
+            <p class="val"><span id="humiNumber">--</span> <span class="unit">%</span></p>
+            <p class="lbl" id="humiLabel">Menunggu data...</p>
+          </div>
+
+          <div class="sensor" id="card-ph">
+            <h3><i class="bi bi-activity"></i> pH Tanah</h3>
+            <p class="val"><span id="phNumber">--</span></p>
+            <p class="lbl" id="phLabel">Menunggu data...</p>
+          </div>
+
+          <div class="sensor ok" id="card-n">
+            <h3><i class="bi bi-flower2"></i> Nitrogen (N)</h3>
+            <p class="val"><span id="nNumber">--</span> <span class="unit">mg/kg</span></p>
+            <p class="lbl" id="nLabel">Menunggu data...</p>
+          </div>
+
+          <div class="sensor ok" id="card-p">
+            <h3><i class="bi bi-flower3"></i> Fosfor (P)</h3>
+            <p class="val"><span id="pNumber">--</span> <span class="unit">mg/kg</span></p>
+            <p class="lbl" id="pLabel">Menunggu data...</p>
+          </div>
+
+          <div class="sensor ok" id="card-k">
+            <h3><i class="bi bi-leaf"></i> Kalium (K)</h3>
+            <p class="val"><span id="kNumber">--</span> <span class="unit">mg/kg</span></p>
+            <p class="lbl" id="kLabel">Menunggu data...</p>
+          </div>
+
+          <div class="sensor ok" id="card-ec">
+            <h3><i class="bi bi-lightning-charge"></i> EC / Konduktivitas</h3>
+            <p class="val"><span id="ecNumber">--</span> <span class="unit">µS/cm</span></p>
+            <p class="lbl" id="ecLabel">Menunggu data...</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="cardx">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-bold">Grafik Perubahan Data Sensor</div>
+            <small class="muted">Realtime dari MQTT</small>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="sensorChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="cardx mb-3">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-bold">Kontrol Penyiraman</div>
+            <span id="pumpStatus" class="badge text-bg-secondary">Pompa: UNKNOWN</span>
+          </div>
+
+          <button class="btn btn-success w-100 fw-bold mb-3" id="btnTogglePump" style="border-radius:14px;padding:.75rem 1rem;">
+            Nyalakan Pompa
+          </button>
+
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-bold" style="font-size:.92rem">Mode Otomatis</div>
+              <div class="muted" style="font-size:.85rem">ESP akan mengatur pompa berdasarkan kelembapan tanah.</div>
+            </div>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" id="autoMode" checked>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cardx">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-bold">Riwayat Penyiraman</div>
+            <button class="btn btn-sm btn-outline-secondary" id="btnRefreshLogs">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+          <div class="logbox" id="logList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+@endsection
+
+@section('scripts')
+<script>
+  const MQTT_CFG = @json($mqtt);
+  const TOPIC = @json($topics);
+
+  const mqttStatus = document.getElementById("mqttStatus");
+  const pumpStatus = document.getElementById("pumpStatus");
+  const btnTogglePump = document.getElementById("btnTogglePump");
+  const autoMode = document.getElementById("autoMode");
+  const logList = document.getElementById("logList");
+  const lastUpdate = document.getElementById("lastUpdate");
+
+  const phNumber = document.getElementById("phNumber");
+  const humiNumber = document.getElementById("humiNumber");
+  const tempNumber = document.getElementById("tempNumber");
+  const nNumber = document.getElementById("nNumber");
+  const pNumber = document.getElementById("pNumber");
+  const kNumber = document.getElementById("kNumber");
+  const ecNumber = document.getElementById("ecNumber");
+
+  const phLabel = document.getElementById("phLabel");
+  const humiLabel = document.getElementById("humiLabel");
+  const tempLabel = document.getElementById("tempLabel");
+  const nLabel = document.getElementById("nLabel");
+  const pLabel = document.getElementById("pLabel");
+  const kLabel = document.getElementById("kLabel");
+  const ecLabel = document.getElementById("ecLabel");
+
+  function setMQTTStatus(connected){
+    mqttStatus.innerHTML = `<span class="dot ${connected ? "on":"off"}"></span> ${connected ? "Connected":"Disconnected"}`;
+  }
+  function setCardStatus(id, kind){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('ok','warn');
+    if (kind) el.classList.add(kind);
+  }
+  function toNum(v){ const n = Number(v); return Number.isFinite(n) ? n : null; }
+
+  let mqttClient = null;
+  let isAutoMode = true;
+  let currentPumpStatus = "UNKNOWN";
+  let lastCommandSource = null;
+  let lastCommandTime = 0;
+
+  function setPumpStatusText(status){
+    currentPumpStatus = status;
+    pumpStatus.textContent = `Pompa: ${status}`;
+    pumpStatus.className = 'badge ' + (status === "ON" ? 'text-bg-success' : (status === "OFF" ? 'text-bg-danger' : 'text-bg-secondary'));
+    btnTogglePump.textContent = (status === "ON") ? "Matikan Pompa" : "Nyalakan Pompa";
+  }
+
+  // Chart
+  const chartLabels = [];
+  const series = { ph:[], humi:[], temp:[], n:[], p:[], k:[], ec:[] };
+
+  const ctx = document.getElementById("sensorChart").getContext("2d");
+  const sensorChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: chartLabels,
+      datasets: [
+        { label:"pH Tanah", data: series.ph, tension: .3 },
+        { label:"Kelembapan (%)", data: series.humi, tension: .3 },
+        { label:"Suhu (°C)", data: series.temp, tension: .3 },
+        { label:"Nitrogen (N mg/kg)", data: series.n, tension: .3 },
+        { label:"Fosfor (P mg/kg)", data: series.p, tension: .3 },
+        { label:"Kalium (K mg/kg)", data: series.k, tension: .3 },
+        { label:"EC (µS/cm)", data: series.ec, tension: .3 },
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:"bottom" } }, scales:{ y:{ beginAtZero:true } } }
+  });
+
+  function addSensorPoint(d){
+    const label = new Date().toLocaleTimeString("id-ID", { hour12:false });
+    chartLabels.push(label);
+    series.ph.push(toNum(d.ph));
+    series.humi.push(toNum(d.humi));
+    series.temp.push(toNum(d.temp));
+    series.n.push(toNum(d.n));
+    series.p.push(toNum(d.p));
+    series.k.push(toNum(d.k));
+    series.ec.push(toNum(d.ec));
+
+    const maxPoints = 40;
+    if (chartLabels.length > maxPoints){
+      chartLabels.shift();
+      Object.values(series).forEach(arr => arr.shift());
+    }
+    sensorChart.update();
+  }
+
+  function updateSensorUI(data){
+    const ph = (typeof data.ph === "number") ? data.ph : toNum(data.ph);
+    const humi = (typeof data.humi === "number") ? data.humi : toNum(data.humi ?? data.moisture ?? data.soil_moisture);
+    const temp = (typeof data.temp === "number") ? data.temp : toNum(data.temp ?? data.temperature ?? data.soilTemp ?? data.soil_temp);
+
+    const n = toNum(data.n), p = toNum(data.p), k = toNum(data.k), ec = toNum(data.ec);
+
+    if (ph !== null){ phNumber.textContent = ph.toFixed(1); phLabel.textContent = (ph>=5.5 && ph<=7) ? "Kondisi optimal untuk okra merah" : "Perlu penyesuaian pH"; setCardStatus('card-ph', (ph>=5.5 && ph<=7) ? 'ok' : 'warn'); }
+    if (humi !== null){ humiNumber.textContent = humi.toFixed(1); humiLabel.textContent = (humi>=40 && humi<=70) ? "Kelembapan ideal" : "Di luar rentang ideal"; setCardStatus('card-humi', (humi>=40 && humi<=70) ? 'ok' : 'warn'); }
+    if (temp !== null){ tempNumber.textContent = temp.toFixed(1); tempLabel.textContent = (temp>=24 && temp<=30) ? "Suhu optimal" : "Suhu perlu dipantau"; setCardStatus('card-temp', (temp>=24 && temp<=30) ? 'ok' : 'warn'); }
+
+    if (n !== null){ nNumber.textContent = n.toFixed(0); nLabel.textContent = "Kadar N terukur"; }
+    if (p !== null){ pNumber.textContent = p.toFixed(0); pLabel.textContent = "Kadar P terukur"; }
+    if (k !== null){ kNumber.textContent = k.toFixed(0); kLabel.textContent = "Kadar K terukur"; }
+    if (ec !== null){ ecNumber.textContent = ec.toFixed(2); ecLabel.textContent = "EC terukur"; }
+
+    if (ph !== null && humi !== null && temp !== null){
+      addSensorPoint({ ph, humi, temp, n, p, k, ec });
+    }
+    lastUpdate.textContent = "Last update: " + new Date().toLocaleString("id-ID");
+  }
+
+  // Logs
+  function renderLogList(logs){
+    logList.innerHTML = "";
+    if (!logs || logs.length === 0){
+      logList.innerHTML = `<div class="muted text-center py-3">Belum ada riwayat penyiraman.</div>`;
+      return;
+    }
+    logs.forEach(log => {
+      const badge = log.source === "manual" ? "manual" : "otomatis";
+      const notes = log.notes ? ` – ${log.notes}` : "";
+      logList.innerHTML += `
+        <div class="logitem d-flex justify-content-between gap-3">
+          <div>
+            <span class="tag ${badge} me-2">${log.source}</span>
+            <b>${log.action}</b>${notes}
+          </div>
+          <div class="text-end muted" style="font-size:.85rem">
+            <div>${log.log_time}</div>
+            ${log.duration_seconds ? `<div>${log.duration_seconds}s</div>` : ``}
+          </div>
+        </div>`;
+    });
+  }
+
+  async function loadWateringLogs(){
+    try{
+      const res = await fetch("/api/watering_logs.php?limit=20");
+      const data = await res.json();
+      renderLogList(Array.isArray(data) ? data : []);
+    }catch(e){
+      renderLogList([]);
+    }
+  }
+
+  async function saveWateringLog(source, action, duration_seconds=null, notes=null){
+    try{
+      const res = await fetch("/api/watering_logs.php",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ source, action, duration_seconds, notes })
+      });
+      if (res.ok) loadWateringLogs();
+    }catch(e){}
+  }
+
+  // MQTT
+  function connectMQTT(){
+    const clientId = "ITANI_WEB_" + Math.floor(Math.random()*100000);
+    mqttClient = new Paho.MQTT.Client(MQTT_CFG.host, Number(MQTT_CFG.port), MQTT_CFG.path, clientId);
+
+    mqttClient.onConnectionLost = () => {
+      setMQTTStatus(false);
+      setTimeout(connectMQTT, 2000);
+    };
+
+    mqttClient.onMessageArrived = (message) => {
+      const topic = message.destinationName;
+      const payload = message.payloadString;
+
+      if (topic === TOPIC.sensor){
+        try{
+          let raw = payload;
+          if (raw.startsWith('"') && raw.endsWith('"')) { try{ raw = JSON.parse(raw); }catch(e){} }
+          const data = (typeof raw === "string") ? JSON.parse(raw) : raw;
+
+          updateSensorUI(data);
+
+          fetch("/api/sensors_insert.php", {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify(data)
+          }).catch(()=>{});
+        }catch(e){}
+      }
+
+      if (topic === TOPIC.pump_status){
+        const raw = payload.trim().toUpperCase();
+        const status = (raw === "ON" || raw === "OFF") ? raw : "UNKNOWN";
+        if (status === "UNKNOWN") return;
+
+        const now = Date.now();
+        if (lastCommandSource === "manual" && (now - lastCommandTime) <= 3000){
+          setPumpStatusText(status);
+          lastCommandSource = null;
+          return;
+        }
+
+        if (isAutoMode){
+          const prev = currentPumpStatus;
+          setPumpStatusText(status);
+          if (status !== prev){
+            saveWateringLog("otomatis", status, null, "Perintah dari ESP");
+          }
+        }
+      }
+
+      if (topic === TOPIC.auto_mode){
+        const raw = payload.trim().toUpperCase();
+        const enabled = (raw === "ON");
+        isAutoMode = enabled;
+        autoMode.checked = enabled;
+      }
+    };
+
+    const options = {
+      timeout: 5,
+      useSSL: false,
+      onSuccess: () => {
+        setMQTTStatus(true);
+        mqttClient.subscribe(TOPIC.sensor);
+        mqttClient.subscribe(TOPIC.pump_status);
+        mqttClient.subscribe(TOPIC.auto_mode);
+      },
+      onFailure: () => {
+        setMQTTStatus(false);
+        setTimeout(connectMQTT, 2000);
+      }
+    };
+
+    if (MQTT_CFG.username){
+      options.userName = MQTT_CFG.username;
+      options.password = MQTT_CFG.password;
+    }
+
+    mqttClient.connect(options);
+  }
+
+  function sendPumpCommand(cmd){
+    if (!mqttClient || !mqttClient.isConnected()) return;
+    const msg = new Paho.MQTT.Message(cmd);
+    msg.destinationName = TOPIC.pump_cmd;
+    mqttClient.send(msg);
+  }
+
+  btnTogglePump.addEventListener("click", () => {
+    const isOn = (currentPumpStatus === "ON");
+    const nextCmd = isOn ? "OFF" : "ON";
+
+    saveWateringLog("manual", nextCmd, null, "Perintah dari dashboard");
+    lastCommandSource = "manual";
+    lastCommandTime = Date.now();
+
+    sendPumpCommand(nextCmd);
+    setPumpStatusText(nextCmd);
+  });
+
+  autoMode.addEventListener("change", () => {
+    const aktif = autoMode.checked;
+    const payload = aktif ? "ON" : "OFF";
+    if (!mqttClient || !mqttClient.isConnected()){
+      autoMode.checked = !aktif;
+      return;
+    }
+    const msg = new Paho.MQTT.Message(payload);
+    msg.destinationName = TOPIC.auto_mode;
+    msg.retained = true;
+    mqttClient.send(msg);
+    isAutoMode = aktif;
+  });
+
+  document.getElementById("btnRefreshLogs").addEventListener("click", loadWateringLogs);
+
+  window.addEventListener("load", async () => {
+    loadWateringLogs();
+
+    fetch("/api/pump_status_latest.php").then(r => r.json()).then(d => setPumpStatusText(d.exists ? d.action : "UNKNOWN")).catch(()=> setPumpStatusText("UNKNOWN"));
+    fetch("/api/sensors_latest.php").then(r => r.json()).then(d => { if (d.exists) updateSensorUI(d); }).catch(()=>{});
+
+    connectMQTT();
+  });
+</script>
+@endsection
