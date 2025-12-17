@@ -141,6 +141,9 @@
           <a class="nav-link {{ str_ends_with($path,'periode.php') ? 'active' : '' }}" href="/periode.php">Periode Tanam</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link {{ str_ends_with($path,'panen.php') ? 'active' : '' }}" href="/panen.php">Hasil Panen</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link {{ str_ends_with($path,'stok.php') ? 'active' : '' }}" href="/stok.php">Stok Bibit &amp; Pupuk</a>
         </li>
         <li class="nav-item">

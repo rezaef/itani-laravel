@@ -29,4 +29,9 @@ class PageController extends Controller
         if ($r = $this->requireLogin()) return $r;
         return view('stok');
     }
+    public function panen()
+    {
+        if ($r = $this->requireLogin()) return $r;
+        return view('panen');
+    }
 }

@@ -35,7 +35,7 @@
               <th>Nama</th>
               <th>Tanggal</th>
               <th>Status</th>
-              <th>Aktif</th>
+              {{-- <th>Aktif</th> --}}
               <th>Panen</th>
               <th style="width:300px;">Aksi</th>
             </tr>
@@ -269,9 +269,7 @@
     }
 
     tbody.innerHTML = rows.map(p => {
-      const aktif = (Number(p.is_active) === 1)
-        ? `<span class="badge text-bg-success">aktif</span>`
-        : `<span class="badge text-bg-secondary">-</span>`;
+
 
       const range = `${(p.tanggal_mulai||'-').slice(0,10)} → ${(p.tanggal_selesai||'-').slice(0,10)}`;
       const hc = Number(p.harvest_count || 0);
@@ -284,7 +282,6 @@
           </td>
           <td>${range}</td>
           <td>${badgeStatus(p.status || 'planning')}</td>
-          <td>${aktif}</td>
           <td class="text-nowrap">
             <span class="badge text-bg-secondary">${hc} data</span>
             <button class="btn btn-sm btn-outline-success ms-2" data-act="harvest" data-id="${p.id}">
@@ -294,7 +291,6 @@
           <td class="text-nowrap">
             <button class="btn btn-sm btn-outline-primary" data-act="edit" data-id="${p.id}"><i class="bi bi-pencil"></i></button>
             <button class="btn btn-sm btn-outline-danger" data-act="del" data-id="${p.id}"><i class="bi bi-trash"></i></button>
-            <button class="btn btn-sm btn-outline-success" data-act="active" data-id="${p.id}"><i class="bi bi-check2-circle"></i> Set Aktif</button>
           </td>
         </tr>
       `;
@@ -396,10 +392,6 @@
     if (act === 'del'){
       if (!confirm('Hapus periode ini? (panen terkait juga akan terhapus)')) return;
       try{ await apiPostPeriods({ action:'delete', id }); await load(); }catch(err){ alert(err.message); }
-    }
-
-    if (act === 'active'){
-      try{ await apiPostPeriods({ action:'set_active', id }); await load(); }catch(err){ alert(err.message); }
     }
 
     if (act === 'harvest'){

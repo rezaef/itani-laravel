@@ -20,6 +20,7 @@ Route::get('/index.php', [DashboardController::class, 'index']);
 Route::get('/periode.php', [PageController::class, 'periode']);
 Route::get('/users.php', [PageController::class, 'users']);
 Route::get('/stok.php', [PageController::class, 'stok']);
+Route::get('/panen.php', [PageController::class, 'panen']);
 
 // auth legacy
 Route::post('/api/login.php', [AuthController::class, 'login']);

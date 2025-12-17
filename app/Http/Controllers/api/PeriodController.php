@@ -35,9 +35,9 @@ class PeriodController extends Controller
                     'periods.status',
                     'periods.created_at',
                     'periods.updated_at',
-                    'periods.is_active'
+                    //'periods.is_active'
                 )
-                // ✅ hitung panen per periode
+                // hitung panen per periode
                 ->selectSub(function ($q) {
                     $q->from('harvests')
                       ->selectRaw('COUNT(*)')
@@ -70,24 +70,24 @@ class PeriodController extends Controller
         $action = $input['action'] ?? 'create';
 
         // --- set_active ---
-        if ($action === 'set_active') {
-            $id = (int)($input['id'] ?? 0);
-            if ($id <= 0) return response()->json(['success'=>false,'error'=>'ID tidak valid'], 400);
+        // if ($action === 'set_active') {
+        //     $id = (int)($input['id'] ?? 0);
+        //     if ($id <= 0) return response()->json(['success'=>false,'error'=>'ID tidak valid'], 400);
 
-            try {
-                if ($role === 'Admin') {
-                    DB::table('periods')->update(['is_active' => 0]);
-                    DB::table('periods')->where('id', $id)->update(['is_active' => 1, 'status' => 'berjalan']);
-                } else {
-                    DB::table('periods')->where('user_id', $user->id)->update(['is_active' => 0]);
-                    DB::table('periods')->where('id', $id)->where('user_id', $user->id)
-                        ->update(['is_active' => 1, 'status' => 'berjalan']);
-                }
-                return response()->json(['success' => true]);
-            } catch (\Throwable $e) {
-                return response()->json(['success'=>false,'error'=>'DB error (SET_ACTIVE)','detail'=>$e->getMessage()], 500);
-            }
-        }
+        //     try {
+        //         if ($role === 'Admin') {
+        //             DB::table('periods')->update(['is_active' => 0]);
+        //             DB::table('periods')->where('id', $id)->update(['is_active' => 1, 'status' => 'berjalan']);
+        //         } else {
+        //             DB::table('periods')->where('user_id', $user->id)->update(['is_active' => 0]);
+        //             DB::table('periods')->where('id', $id)->where('user_id', $user->id)
+        //                 ->update(['is_active' => 1, 'status' => 'berjalan']);
+        //         }
+        //         return response()->json(['success' => true]);
+        //     } catch (\Throwable $e) {
+        //         return response()->json(['success'=>false,'error'=>'DB error (SET_ACTIVE)','detail'=>$e->getMessage()], 500);
+        //     }
+        // }
 
         // --- update_status ---
         if ($action === 'update_status') {
