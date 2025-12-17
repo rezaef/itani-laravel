@@ -151,14 +151,14 @@
     }
   });
 
-  // set icon sesuai theme (layout auth sudah applyTheme)
-  const t = document.documentElement.getAttribute('data-theme');
-  const themeBtn = document.getElementById('themeBtn');
-  if (themeBtn) themeBtn.innerHTML = t === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
-  themeBtn.addEventListener('click', () => {
-    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('itani_theme', next);
-    location.reload(); // simpel & aman untuk login page
-  });
+  // // set icon sesuai theme (layout auth sudah applyTheme)
+  // const t = document.documentElement.getAttribute('data-theme');
+  // const themeBtn = document.getElementById('themeBtn');
+  // if (themeBtn) themeBtn.innerHTML = t === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
+  // themeBtn.addEventListener('click', () => {
+  //   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  //   localStorage.setItem('itani_theme', next);
+  //   location.reload(); // simpel & aman untuk login page
+  // });
 </script>
 @endsection
