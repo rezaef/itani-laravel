@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\SensorNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class SensorController extends Controller
 {
+    public function __construct(private readonly SensorNotificationService $notif)
+    {
+    }
+
     public function latest()
     {
         $row = DB::table('sensor_readings')->orderByDesc('reading_time')->first();
@@ -63,6 +68,13 @@ class SensorController extends Controller
                 'p' => $p,
                 'k' => $k,
                 'reading_time' => now(),
+            ]);
+
+            // Buat notifikasi jika nilai melewati / hampir mencapai ambang batas
+            $this->notif->evaluateAndCreate([
+                'ph' => $ph,
+                'soil_moisture' => $humi,
+                'soil_temp' => $temp,
             ]);
 
             return response()->json([

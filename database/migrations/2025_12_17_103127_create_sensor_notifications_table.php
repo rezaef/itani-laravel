@@ -15,7 +15,9 @@ return new class extends Migration {
       $table->boolean('is_read')->default(false);
       $table->timestamps();
 
-      $table->index(['user_id','is_read','created_at']);
+      $table->unsignedInteger('user_id')->nullable();
+      $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+
     });
   }
   public function down(): void {

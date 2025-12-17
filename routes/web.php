@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\PeriodController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\HarvestController;
 use App\Http\Controllers\Api\StockController;
+use App\Http\Controllers\Api\NotificationController;
 
 
 Route::get('/', fn() => redirect('/index.php'));
@@ -36,6 +37,10 @@ Route::get('/api/sensors_latest.php', [SensorController::class, 'latest']);
 Route::get('/api/watering_logs.php', [WateringLogController::class, 'index']);
 Route::post('/api/watering_logs.php', [WateringLogController::class, 'store']);
 Route::get('/api/pump_status_latest.php', [WateringLogController::class, 'pumpStatusLatest']);
+
+// notifications (sensor ambang batas / error)
+Route::get('/api/notifications.php', [NotificationController::class, 'index']);
+Route::post('/api/notifications.php', [NotificationController::class, 'markRead']);
 
 // periods legacy
 Route::get('/api/periods.php', [PeriodController::class, 'index']);

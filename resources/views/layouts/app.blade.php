@@ -132,6 +132,34 @@
       <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0">
         @yield('top-right')
 
+        <!-- Notifikasi (ambang batas sensor / error sistem) -->
+        <div class="dropdown" id="notifWrap" style="display:none">
+          <button class="btn btn-ghost position-relative" id="btnNotif" data-bs-toggle="dropdown" aria-expanded="false" title="Notifikasi">
+            <i class="bi bi-bell"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="display:none">
+              0
+              <span class="visually-hidden">unread notifications</span>
+            </span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end p-0" style="width: 340px; border-radius: 14px; overflow:hidden" aria-labelledby="btnNotif">
+            <li class="px-3 py-2" style="background: rgba(15,23,42,.06)">
+              <div class="fw-bold">Notifikasi</div>
+              <div class="text-muted" style="font-size:.85rem">Ambang batas sensor, status sistem, dan aktivitas penting.</div>
+            </li>
+            <li><hr class="dropdown-divider my-0"></li>
+            <li>
+              <div id="notifList" class="px-2" style="max-height: 320px; overflow:auto">
+                <div class="text-muted text-center py-3" style="font-size:.9rem">Belum ada notifikasi.</div>
+              </div>
+            </li>
+            <li><hr class="dropdown-divider my-0"></li>
+            <li class="px-2 py-2 d-flex justify-content-between align-items-center">
+              <small class="text-muted" id="notifUpdated">–</small>
+              <button class="btn btn-sm btn-outline-secondary" id="btnNotifMarkAll">Tandai dibaca</button>
+            </li>
+          </ul>
+        </div>
+
         <div class="text-end me-2 d-none d-lg-block">
           <div class="text-white fw-semibold" style="font-size:.92rem">{{ $name }}</div>
           <small class="text-white-50">&#64;{{ $username }}</small>
@@ -159,6 +187,142 @@
     try { await fetch('/api/logout.php'); } catch(e){}
     window.location.href = '/login.html';
   });
+</script>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:9999" id="toastHost"></div>
+
+<script>
+  // ===== Notifikasi global (polling) =====
+  const notifWrap = document.getElementById('notifWrap');
+  const notifBadge = document.getElementById('notifBadge');
+  const notifList = document.getElementById('notifList');
+  const notifUpdated = document.getElementById('notifUpdated');
+  const btnNotif = document.getElementById('btnNotif');
+  const btnNotifMarkAll = document.getElementById('btnNotifMarkAll');
+  const toastHost = document.getElementById('toastHost');
+
+  let lastNotifIds = new Set();
+  let latestBatchIds = [];
+
+  function esc(s){ return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+
+  function levelBadge(level){
+    if (level === 'danger') return '<span class="badge text-bg-danger me-2">Danger</span>';
+    if (level === 'warning') return '<span class="badge text-bg-warning text-dark me-2">Warning</span>';
+    return '<span class="badge text-bg-secondary me-2">Info</span>';
+  }
+
+  function renderNotifs(items){
+    if (!items || items.length === 0){
+      notifList.innerHTML = '<div class="text-muted text-center py-3" style="font-size:.9rem">Belum ada notifikasi.</div>';
+      return;
+    }
+    notifList.innerHTML = items.map(n => {
+      const isUnread = !n.is_read;
+      const bg = isUnread ? 'rgba(34,197,94,.10)' : 'transparent';
+      return `
+        <div class="px-2 py-2" style="border-bottom:1px solid rgba(15,23,42,.08); background:${bg}; border-radius:12px; margin:.35rem 0;">
+          <div class="d-flex align-items-start gap-2">
+            <div style="padding-top:2px">${levelBadge(n.level)}</div>
+            <div class="flex-grow-1">
+              <div class="fw-bold" style="font-size:.92rem">${esc(n.title)}</div>
+              <div class="text-muted" style="font-size:.86rem">${esc(n.message)}</div>
+              <div class="text-muted" style="font-size:.75rem; margin-top:4px">${esc(n.created_at)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function showToast(title, message, level){
+    if (!toastHost) return;
+    const id = 't' + Math.random().toString(16).slice(2);
+    const headerClass = level === 'danger' ? 'text-bg-danger' : (level === 'warning' ? 'text-bg-warning text-dark' : 'text-bg-secondary');
+    const html = `
+      <div class="toast" id="${id}" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header ${headerClass}">
+          <i class="bi bi-bell-fill me-2"></i>
+          <strong class="me-auto">${esc(title)}</strong>
+          <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">${esc(message)}</div>
+      </div>
+    `;
+    toastHost.insertAdjacentHTML('beforeend', html);
+    const el = document.getElementById(id);
+    const t = new bootstrap.Toast(el, { delay: 4500 });
+    t.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+  }
+
+  async function fetchNotifs(){
+    // kalau belum login, endpoint akan 401 => sembunyikan ikon
+    try{
+      const res = await fetch('/api/notifications.php?limit=8');
+      if (!res.ok) {
+        if (notifWrap) notifWrap.style.display = 'none';
+        return;
+      }
+      const data = await res.json();
+      if (!data || !data.success) return;
+
+      if (notifWrap) notifWrap.style.display = '';
+
+      const unread = Number(data.unread_count || 0);
+      if (unread > 0){
+        notifBadge.textContent = unread;
+        notifBadge.style.display = '';
+      } else {
+        notifBadge.style.display = 'none';
+      }
+
+      const items = data.items || [];
+      latestBatchIds = items.map(x => x.id);
+      renderNotifs(items);
+      notifUpdated.textContent = 'Update: ' + new Date().toLocaleString('id-ID');
+
+      // Toast untuk notifikasi baru (yang belum pernah tampil)
+      for (const n of items){
+        if (!lastNotifIds.has(n.id) && !n.is_read){
+          showToast(n.title, n.message, n.level);
+        }
+      }
+      lastNotifIds = new Set(items.map(x => x.id));
+    }catch(e){
+      // ignore
+    }
+  }
+
+  async function markAllRead(){
+    if (!latestBatchIds || latestBatchIds.length === 0) return;
+    try{
+      await fetch('/api/notifications.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: latestBatchIds })
+      });
+    }catch(e){}
+  }
+
+  if (btnNotif){
+    // saat dropdown dibuka, langsung tandai yang tampil sebagai read
+    btnNotif.addEventListener('shown.bs.dropdown', async () => {
+      await markAllRead();
+      await fetchNotifs();
+    });
+  }
+  if (btnNotifMarkAll){
+    btnNotifMarkAll.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await markAllRead();
+      await fetchNotifs();
+    });
+  }
+
+  // polling 10 detik (sesuai SRS)
+  fetchNotifs();
+  setInterval(fetchNotifs, 10000);
 </script>
 
 @yield('scripts')
