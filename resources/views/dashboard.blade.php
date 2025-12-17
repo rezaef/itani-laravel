@@ -20,7 +20,6 @@
       box-shadow: 0 14px 30px rgba(0,0,0,.18);
       color:#e5e7eb;
     }
-    [data-theme="dark"] .sensor{ background: linear-gradient(135deg, rgba(2,6,23,.70), rgba(15,23,42,.70)); }
     .sensor.ok{ border-color:#16a34a; }
     .sensor.warn{ border-color:#facc15; }
     .sensor h3{ font-size:.95rem; margin:0 0 6px; opacity:.95; display:flex; gap:.55rem; align-items:center; }
@@ -73,18 +72,7 @@
       background-clip: padding-box;
     }
 
-    /* Dark mode (kamu pakai [data-theme="dark"]) */
-    [data-theme="dark"] #logList.logbox{
-      scrollbar-color: rgba(148,163,184,.55) transparent;
-    }
-    [data-theme="dark"] #logList.logbox::-webkit-scrollbar-thumb{
-      background: rgba(148,163,184,.50);
-      background-clip: padding-box;
-    }
-    [data-theme="dark"] #logList.logbox::-webkit-scrollbar-thumb:hover{
-      background: rgba(148,163,184,.70);
-      background-clip: padding-box;
-    }
+    
 #logList .logitem{
   display: grid !important;
   grid-template-columns: 1fr auto;
