@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id" data-theme="light">
+<html lang="id">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -17,15 +17,6 @@
       --nav:#15803d;
       --chip:rgba(255,255,255,.16);
       --chipB:rgba(255,255,255,.18);
-    }
-    [data-theme="dark"]{
-      --bg1:#0b1220; --bg2:#0b1b2c; --card:rgba(15,23,42,.75);
-      --text:#e5e7eb; --muted:#94a3b8; --border:rgba(255,255,255,.10);
-      --shadow:0 18px 60px rgba(0,0,0,.35);
-      --ring:rgba(34,197,94,.20);
-      --nav:#0f5132;
-      --chip:rgba(255,255,255,.10);
-      --chipB:rgba(255,255,255,.16);
     }
 
     body{
@@ -83,33 +74,20 @@
     }
     .btn-ghost:hover{ background: rgba(255,255,255,.18); }
 
-    .avatar{
-      width:40px; height:40px; border-radius:999px;
-      display:grid; place-items:center; font-weight:900;
-      background: rgba(255,255,255,.18);
-      border: 1px solid rgba(255,255,255,.22);
-      color:#fff;
-    }
-
     /* input */
     .form-control, .form-select, .input-group-text{
       border-color: var(--border) !important;
       background: rgba(255,255,255,.65);
       color: var(--text);
     }
-    [data-theme="dark"] .form-control,
-    [data-theme="dark"] .form-select,
-    [data-theme="dark"] .input-group-text{
-      background: rgba(2,6,23,.35);
-      color: var(--text);
-    }
+
     .form-control:focus, .form-select:focus{
       box-shadow: 0 0 0 .25rem var(--ring);
     }
 
     /* placeholder follow theme */
     .form-control::placeholder{ color: rgba(100,116,139,.85); opacity: 1; }
-    [data-theme="dark"] .form-control::placeholder{ color: rgba(148,163,184,.85); }
+
   </style>
 
   @yield('head')
@@ -159,15 +137,10 @@
           <small class="text-white-50">&#64;{{ $username }}</small>
         </div>
 
-        <button class="btn btn-ghost" type="button" id="themeBtn" title="Toggle tema">
-          <i class="bi bi-moon-stars"></i>
-        </button>
-
         <button class="btn btn-ghost" type="button" id="btnLogout" title="Logout">
           <i class="bi bi-box-arrow-right"></i>
         </button>
 
-        <div class="avatar">{{ $initial }}</div>
       </div>
     </div>
   </div>
@@ -180,22 +153,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  // Theme global (dipakai semua page)
-  const root = document.documentElement;
-  const themeBtn = document.getElementById('themeBtn');
-
-  function applyTheme(t){
-    root.setAttribute('data-theme', t);
-    localStorage.setItem('itani_theme', t);
-    if (themeBtn) themeBtn.innerHTML = t === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
-  }
-
-  const saved = localStorage.getItem('itani_theme');
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
-
-  if (themeBtn) themeBtn.addEventListener('click', () => applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
-
   // Logout global
   const btnLogout = document.getElementById('btnLogout');
   if (btnLogout) btnLogout.addEventListener('click', async () => {
