@@ -15,12 +15,7 @@
       --shadow:0 18px 60px rgba(0,0,0,.14);
       --ring:rgba(99,102,241,.25);
     }
-    [data-theme="dark"]{
-      --bg1:#0b1220; --bg2:#0b1b2c; --card:rgba(15,23,42,.72);
-      --text:#e5e7eb; --muted:#94a3b8; --border:rgba(255,255,255,.10);
-      --shadow:0 18px 60px rgba(0,0,0,.35);
-      --ring:rgba(34,197,94,.20);
-    }
+    
     body{
       min-height:100vh;
       background:
@@ -55,15 +50,11 @@
       background: rgba(255,255,255,.65);
       color: var(--text);
     }
-    [data-theme="dark"] .form-control,
-    [data-theme="dark"] .input-group-text{
-      background: rgba(2,6,23,.35);
-      color: var(--text);
-    }
+    
     .form-control:focus{ box-shadow: 0 0 0 .25rem var(--ring); }
 
     .form-control::placeholder{ color: rgba(100,116,139,.85); opacity:1; }
-    [data-theme="dark"] .form-control::placeholder{ color: rgba(148,163,184,.85); }
+    
 
     /* ---------- Brand mark (logo kecil) ---------- */
     .brand-mark{
@@ -76,10 +67,7 @@
       background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(99,102,241,.18));
       box-shadow: 0 10px 26px rgba(0,0,0,.12);
     }
-    [data-theme="dark"] .brand-mark{
-      background: linear-gradient(135deg, rgba(34,197,94,.14), rgba(99,102,241,.12));
-      box-shadow: 0 10px 26px rgba(0,0,0,.30);
-    }
+    
     .brand-mark svg{ display:block; }
 
     /* ---------- Hint box bawah tombol (biar nggak nyilauin) ---------- */
@@ -89,9 +77,7 @@
       background: rgba(34,197,94,.08); /* light: hijau tipis */
       color: var(--muted);
     }
-    [data-theme="dark"] .hint-box{
-      background: rgba(34,197,94,.10); /* dark: hijau tipis tapi tidak terang */
-    }
+    
     .hint-pill{
       display: inline-block;
       padding: .18rem .55rem;
@@ -102,11 +88,6 @@
       font-weight: 800;
       font-size: .78rem;
     }
-    [data-theme="dark"] .hint-pill{
-      background: rgba(2,6,23,.55);
-      color: #e5e7eb;
-    }
-
   </style>
   @yield('head')
 </head>
