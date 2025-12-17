@@ -36,9 +36,9 @@
       </div>
     </div>
 
-    <button class="btn btn-ghost" type="button" id="themeBtn" aria-label="Toggle tema">
+    <!-- <button class="btn btn-ghost" type="button" id="themeBtn" aria-label="Toggle tema">
       <i class="bi bi-moon-stars"></i>
-    </button>
+    </button> -->
   </div>
 
   <div class="px-4 pb-4">

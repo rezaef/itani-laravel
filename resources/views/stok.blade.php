@@ -331,7 +331,7 @@
   async function loadSeeds(){
     try {
       seedCache = await apiGet(API_SEEDS);
-      setBadge('seedStatus', true, 'Aktif');
+      //setBadge('seedStatus', true, 'Aktif');
 
       const tbody = document.getElementById('seedTbody');
       if (!seedCache.length){
@@ -470,7 +470,7 @@
   async function loadFerts(){
     try {
       fertCache = await apiGet(API_FERTS);
-      setBadge('fertStatus', true, 'Aktif');
+      //setBadge('fertStatus', true, 'Aktif');
 
       const tbody = document.getElementById('fertTbody');
       if (!fertCache.length){
