@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\WateringLogController;
 use App\Http\Controllers\Api\PeriodController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\HarvestController;
+use App\Http\Controllers\Api\StockController;
+
 
 Route::get('/', fn() => redirect('/index.php'));
 Route::view('/login.html', 'login');
@@ -44,6 +46,10 @@ Route::get('/api/harvests.php', [HarvestController::class, 'index']);
 Route::post('/api/harvests.php', [HarvestController::class, 'store']);
 Route::put('/api/harvests.php/{id}', [HarvestController::class, 'update']);
 Route::delete('/api/harvests.php/{id}', [HarvestController::class, 'destroy']);
+
+Route::match(['GET','POST'], 'api/seed_stock.php', [StockController::class, 'seeds']);
+Route::match(['GET','POST'], 'api/fertilizer_stock.php', [StockController::class, 'fertilizers']);
+
 // users legacy
 Route::get('/api/users.php', [UserController::class, 'index']);
 Route::post('/api/users.php', [UserController::class, 'store']);
