@@ -153,7 +153,7 @@
 
         <div class="text-end me-2 d-none d-lg-block">
           <div class="text-white fw-semibold" style="font-size:.92rem">{{ $name }}</div>
-          <small class="text-white-50">@{{ $username }}</small>
+          <small class="text-white-50">&#64;{{ $username }}</small>
         </div>
 
         <button class="btn btn-ghost" type="button" id="themeBtn" title="Toggle tema">

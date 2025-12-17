@@ -64,6 +64,49 @@
 
     .form-control::placeholder{ color: rgba(100,116,139,.85); opacity:1; }
     [data-theme="dark"] .form-control::placeholder{ color: rgba(148,163,184,.85); }
+
+    /* ---------- Brand mark (logo kecil) ---------- */
+    .brand-mark{
+      width: 46px;
+      height: 46px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(99,102,241,.18));
+      box-shadow: 0 10px 26px rgba(0,0,0,.12);
+    }
+    [data-theme="dark"] .brand-mark{
+      background: linear-gradient(135deg, rgba(34,197,94,.14), rgba(99,102,241,.12));
+      box-shadow: 0 10px 26px rgba(0,0,0,.30);
+    }
+    .brand-mark svg{ display:block; }
+
+    /* ---------- Hint box bawah tombol (biar nggak nyilauin) ---------- */
+    .hint-box{
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(34,197,94,.08); /* light: hijau tipis */
+      color: var(--muted);
+    }
+    [data-theme="dark"] .hint-box{
+      background: rgba(34,197,94,.10); /* dark: hijau tipis tapi tidak terang */
+    }
+    .hint-pill{
+      display: inline-block;
+      padding: .18rem .55rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,.06);
+      color: var(--text);
+      font-weight: 800;
+      font-size: .78rem;
+    }
+    [data-theme="dark"] .hint-pill{
+      background: rgba(2,6,23,.55);
+      color: #e5e7eb;
+    }
+
   </style>
   @yield('head')
 </head>

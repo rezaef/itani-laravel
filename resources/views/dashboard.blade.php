@@ -37,7 +37,69 @@
     }
     .tag.manual{ background: rgba(59,130,246,.12); color: #1d4ed8; }
     .tag.otomatis{ background: rgba(34,197,94,.14); color: #166534; }
-  </style>
+    .log-meta{
+      min-width: 150px;
+      text-align: right;
+      font-size: .85rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+    .log-date{ opacity: .78; }
+    .log-time{ opacity: .95; font-weight: 800; }
+    .log-dur{ opacity: .78; margin-top: 2px; }
+    .dot.on{ background:#22c55e; box-shadow: 0 0 6px rgba(34,197,94,.75); }
+    .dot.off{ background:#dc2626; box-shadow: 0 0 6px rgba(220,38,38,.75); }
+    /* Scrollbar khusus Riwayat Penyiraman */
+    #logList.logbox{
+      scrollbar-width: thin; /* Firefox */
+      scrollbar-color: rgba(100,116,139,.55) transparent; /* thumb track */
+    }
+
+    /* WebKit: Safari/Chrome/Edge */
+    #logList.logbox::-webkit-scrollbar{
+      width: 10px;
+    }
+    #logList.logbox::-webkit-scrollbar-track{
+      background: transparent;
+    }
+    #logList.logbox::-webkit-scrollbar-thumb{
+      background: rgba(100,116,139,.55);
+      border-radius: 999px;
+      border: 2px solid transparent;     /* bikin thumb rapi & gak “lompat” */
+      background-clip: padding-box;
+    }
+    #logList.logbox::-webkit-scrollbar-thumb:hover{
+      background: rgba(100,116,139,.75);
+      background-clip: padding-box;
+    }
+
+    /* Dark mode (kamu pakai [data-theme="dark"]) */
+    [data-theme="dark"] #logList.logbox{
+      scrollbar-color: rgba(148,163,184,.55) transparent;
+    }
+    [data-theme="dark"] #logList.logbox::-webkit-scrollbar-thumb{
+      background: rgba(148,163,184,.50);
+      background-clip: padding-box;
+    }
+    [data-theme="dark"] #logList.logbox::-webkit-scrollbar-thumb:hover{
+      background: rgba(148,163,184,.70);
+      background-clip: padding-box;
+    }
+#logList .logitem{
+  display: grid !important;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+#logList .logitem .text-end{
+  margin-right: 22px;
+  min-width: 92px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+</style>
 @endsection
 
 @section('content')
@@ -266,29 +328,53 @@
     lastUpdate.textContent = "Last update: " + new Date().toLocaleString("id-ID");
   }
 
-  // Logs
+  function fmtLogTime(s){
+    if (!s) return { date: "-", time: "-" };
+
+    let t = String(s);
+    if (t.includes(" ") && !t.includes("T")) t = t.replace(" ", "T");
+
+    const d = new Date(t);
+    if (isNaN(d.getTime())) return { date: String(s), time: "" };
+
+    return {
+      date: d.toLocaleDateString("id-ID", { day:"2-digit", month:"2-digit", year:"numeric" }),
+      time: d.toLocaleTimeString("id-ID", { hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false }),
+    };
+  }
+
   function renderLogList(logs){
     logList.innerHTML = "";
+
     if (!logs || logs.length === 0){
-      logList.innerHTML = `<div class="muted text-center py-3">Belum ada riwayat penyiraman.</div>`;
+      logList.innerHTML = '<div class="muted text-center py-3">Belum ada riwayat penyiraman.</div>';
       return;
     }
-    logs.forEach(log => {
-      const badge = log.source === "manual" ? "manual" : "otomatis";
+
+    let html = "";
+    for (const log of logs){
+      const badge = (log.source === "manual") ? "manual" : "otomatis";
       const notes = log.notes ? ` – ${log.notes}` : "";
-      logList.innerHTML += `
+      const dt = fmtLogTime(log.log_time);
+
+      html += `
         <div class="logitem d-flex justify-content-between gap-3">
           <div>
             <span class="tag ${badge} me-2">${log.source}</span>
             <b>${log.action}</b>${notes}
           </div>
-          <div class="text-end muted" style="font-size:.85rem">
-            <div>${log.log_time}</div>
-            ${log.duration_seconds ? `<div>${log.duration_seconds}s</div>` : ``}
+          <div class="log-meta">
+            <div class="log-date">${dt.date}</div>
+            <div class="log-time">${dt.time}</div>
+            ${log.duration_seconds ? `<div class="log-dur">${log.duration_seconds}s</div>` : ``}
           </div>
-        </div>`;
-    });
+        </div>
+      `;
+    }
+
+    logList.innerHTML = html;
   }
+
 
   async function loadWateringLogs(){
     try{
@@ -341,26 +427,37 @@
         }catch(e){}
       }
 
-      if (topic === TOPIC.pump_status){
+      if (topic === TOPIC.pump_status) {
         const raw = payload.trim().toUpperCase();
         const status = (raw === "ON" || raw === "OFF") ? raw : "UNKNOWN";
         if (status === "UNKNOWN") return;
 
         const now = Date.now();
-        if (lastCommandSource === "manual" && (now - lastCommandTime) <= 3000){
+
+        // CASE 1: echo dari klik manual dashboard (<= 3 detik)
+        if (lastCommandSource === "manual" && (now - lastCommandTime) <= 3000) {
           setPumpStatusText(status);
           lastCommandSource = null;
           return;
         }
 
-        if (isAutoMode){
-          const prev = currentPumpStatus;
+        // CASE 2: mode otomatis ON -> ini perintah otomatis dari ESP
+        if (isAutoMode) {
+          const prevStatus = currentPumpStatus;
           setPumpStatusText(status);
-          if (status !== prev){
+
+          // log hanya kalau status berubah
+          if (status !== prevStatus) {
             saveWateringLog("otomatis", status, null, "Perintah dari ESP");
           }
+          return;
         }
+
+        // CASE 3: auto mode OFF dan bukan echo manual -> ABAIKAN (samakan native)
+        console.log("Pump status diabaikan (autoMode OFF & bukan echo manual)");
+        return;
       }
+
 
       if (topic === TOPIC.auto_mode){
         const raw = payload.trim().toUpperCase();
@@ -429,12 +526,25 @@
   document.getElementById("btnRefreshLogs").addEventListener("click", loadWateringLogs);
 
   window.addEventListener("load", async () => {
-    loadWateringLogs();
+    try { loadWateringLogs(); } catch(e) {}
 
-    fetch("/api/pump_status_latest.php").then(r => r.json()).then(d => setPumpStatusText(d.exists ? d.action : "UNKNOWN")).catch(()=> setPumpStatusText("UNKNOWN"));
-    fetch("/api/sensors_latest.php").then(r => r.json()).then(d => { if (d.exists) updateSensorUI(d); }).catch(()=>{});
+    // ambil status pompa terakhir (buat state awal)
+    try {
+      const r = await fetch("/api/pump_status_latest.php");
+      const d = await r.json();
+      if (d.exists && (d.action === "ON" || d.action === "OFF")) setPumpStatusText(d.action);
+    } catch (e) {}
 
-    connectMQTT();
+    // ambil sensor terakhir juga (biar langsung kebaca walau MQTT belum publish)
+    try {
+      const r2 = await fetch("/api/sensors_latest.php");
+      const s = await r2.json();
+      if (s.exists) updateSensorUI(s);
+    } catch (e) {}
+
+    // PASTI konek MQTT
+    try { connectMQTT(); } catch(e) { console.error(e); }
   });
+
 </script>
 @endsection

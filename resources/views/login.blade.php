@@ -6,9 +6,30 @@
 <div class="auth-card" id="card">
   <div class="p-4 d-flex align-items-center justify-content-between gap-3">
     <div class="d-flex align-items-center gap-3">
-      <div class="rounded-4 d-grid place-items-center" style="width:44px;height:44px;background:linear-gradient(135deg, rgba(34,197,94,.18), rgba(99,102,241,.18));border:1px solid var(--border);">
-        <i class="bi bi-droplet-half fs-4"></i>
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="itaniG" x1="3" y1="3" x2="21" y2="21">
+              <stop stop-color="#22c55e"/>
+              <stop offset="1" stop-color="#6366f1"/>
+            </linearGradient>
+          </defs>
+
+          <!-- bentuk daun -->
+          <path d="M20 4c-6.5.6-11.6 3.7-14.4 8.6C4.4 14.8 4 16.6 4 18c0 1.1.9 2 2 2
+                  1.4 0 3.2-.4 5.4-1.6C16.3 15.6 19.4 10.5 20 4Z"
+                fill="url(#itaniG)" opacity="0.95"/>
+
+          <!-- urat daun -->
+          <path d="M7.2 16.8c3.4-3.5 7.2-6.1 11.2-7.8"
+                stroke="rgba(255,255,255,.90)" stroke-width="1.7" stroke-linecap="round"/>
+
+          <!-- tetes air kecil -->
+          <path d="M8.2 10.1c.8 1 .9 1.7.9 2.1a1.6 1.6 0 1 1-3.2 0c0-.4.1-1.1.9-2.1.3-.4.5-.7.7-1 .2.3.4.6.7 1Z"
+                fill="rgba(255,255,255,.85)"/>
+        </svg>
       </div>
+
       <div>
         <div class="h5 fw-bold mb-0">Login ITani</div>
         <div class="text-muted" style="color:var(--muted)!important">Masuk menggunakan username dan password.</div>
@@ -51,12 +72,12 @@
       </button>
     </form>
 
-    <div class="mt-3 p-3 rounded-4" style="border:1px dashed var(--border); background:rgba(255,255,255,.45);">
+    <div class="mt-3 p-3 hint-box">
       <div class="d-flex gap-2 align-items-start">
         <i class="bi bi-info-circle mt-1"></i>
-        <div class="text-muted" style="color:var(--muted)!important">
+        <div>
           User baru dari menu <b>Kelola User</b> memakai password default
-          <span class="badge text-bg-light border" style="border-color:var(--border)!important">password123</span>
+          <span class="hint-pill">password123</span>
         </div>
       </div>
     </div>

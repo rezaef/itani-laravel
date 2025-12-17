@@ -24,18 +24,32 @@ class PeriodController extends Controller
         $role = $user->role ?? 'Petani';
 
         try {
-            if ($role === 'Admin') {
-                $rows = DB::table('periods')
-                    ->select('id','user_id','nama_periode','tanggal_mulai','tanggal_selesai','deskripsi','status','created_at','updated_at','is_active')
-                    ->orderByDesc('tanggal_mulai')
-                    ->get();
-            } else {
-                $rows = DB::table('periods')
-                    ->select('id','user_id','nama_periode','tanggal_mulai','tanggal_selesai','deskripsi','status','created_at','updated_at','is_active')
-                    ->where('user_id', $user->id)
-                    ->orderByDesc('tanggal_mulai')
-                    ->get();
+            $base = DB::table('periods')
+                ->select(
+                    'periods.id',
+                    'periods.user_id',
+                    'periods.nama_periode',
+                    'periods.tanggal_mulai',
+                    'periods.tanggal_selesai',
+                    'periods.deskripsi',
+                    'periods.status',
+                    'periods.created_at',
+                    'periods.updated_at',
+                    'periods.is_active'
+                )
+                // ✅ hitung panen per periode
+                ->selectSub(function ($q) {
+                    $q->from('harvests')
+                      ->selectRaw('COUNT(*)')
+                      ->whereColumn('harvests.periode_id', 'periods.id');
+                }, 'harvest_count')
+                ->orderByDesc('periods.tanggal_mulai');
+
+            if ($role !== 'Admin') {
+                $base->where('periods.user_id', $user->id);
             }
+
+            $rows = $base->get();
 
             return response()->json(['success' => true, 'data' => $rows]);
         } catch (\Throwable $e) {
@@ -103,6 +117,10 @@ class PeriodController extends Controller
             try {
                 $q = DB::table('periods')->where('id', $id);
                 if ($role !== 'Admin') $q->where('user_id', $user->id);
+
+                // ✅ optional: hapus panen yang terkait biar DB bersih
+                DB::table('harvests')->where('periode_id', $id)->delete();
+
                 $q->delete();
 
                 return response()->json(['success' => true]);

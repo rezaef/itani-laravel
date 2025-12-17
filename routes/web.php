@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\SensorController;
 use App\Http\Controllers\Api\WateringLogController;
 use App\Http\Controllers\Api\PeriodController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\HarvestController;
 
 Route::get('/', fn() => redirect('/index.php'));
 Route::view('/login.html', 'login');
@@ -37,6 +38,11 @@ Route::get('/api/pump_status_latest.php', [WateringLogController::class, 'pumpSt
 Route::get('/api/periods.php', [PeriodController::class, 'index']);
 Route::post('/api/periods.php', [PeriodController::class, 'store']);
 
+Route::get('/api/harvests.php', [HarvestController::class, 'index']);
+// Route::get('/api/periods/{id}/harvests', [HarvestController::class, 'listByPeriod']);
+Route::post('/api/harvests.php', [HarvestController::class, 'store']);
+Route::put('/api/harvests.php/{id}', [HarvestController::class, 'update']);
+Route::delete('/api/harvests.php/{id}', [HarvestController::class, 'destroy']);
 // users legacy
 Route::get('/api/users.php', [UserController::class, 'index']);
 Route::post('/api/users.php', [UserController::class, 'store']);

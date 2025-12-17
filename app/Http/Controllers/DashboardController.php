@@ -11,7 +11,7 @@ class DashboardController extends Controller
         if (!auth()->check()) return redirect('/login.html');
 
         $mqtt = [
-            'host' => env('MQTT_HOST', '172.20.10.5'),
+            'host' => env('MQTT_HOST', '172.0.0.1'),
             'port' => (int) env('MQTT_PORT', 15675),
             'path' => env('MQTT_PATH', '/ws'),
             'username' => env('MQTT_USERNAME', 'okra'),
