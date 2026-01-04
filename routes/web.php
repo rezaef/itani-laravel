@@ -41,6 +41,8 @@ Route::get('/api/pump_status_latest.php', [WateringLogController::class, 'pumpSt
 // notifications (sensor ambang batas / error)
 Route::get('/api/notifications.php', [NotificationController::class, 'index']);
 Route::post('/api/notifications.php', [NotificationController::class, 'markRead']);
+Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+
 
 // periods legacy
 Route::get('/api/periods.php', [PeriodController::class, 'index']);

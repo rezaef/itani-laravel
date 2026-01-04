@@ -8,43 +8,49 @@ use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
-    public function index(Request $request)
-    {
-        if (!auth()->check()) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
-        }
+   public function index(Request $request)
+{
+    $limit = (int) $request->query('limit', 8);
+    $limit = max(1, min($limit, 30));
 
-        $limit = (int) $request->query('limit', 8);
-        $limit = max(1, min($limit, 30));
+    $onlyUnread = $request->query('unread') == '1';
 
-        $onlyUnread = $request->query('unread') == '1';
+    $q = SensorNotification::query()->orderByDesc('created_at');
 
-        $q = SensorNotification::query()
-            // broadcast + per-user
-            ->where(function ($qq) {
-                $qq->whereNull('user_id')->orWhere('user_id', auth()->id());
-            })
-            ->orderByDesc('created_at');
-
-        if ($onlyUnread) $q->where('is_read', false);
-
-        $items = $q->limit($limit)->get([
-            'id','level','title','message','is_read','created_at'
-        ]);
-
-        $unreadCount = SensorNotification::query()
-            ->where(function ($qq) {
-                $qq->whereNull('user_id')->orWhere('user_id', auth()->id());
-            })
-            ->where('is_read', false)
-            ->count();
-
-        return response()->json([
-            'success' => true,
-            'unread_count' => $unreadCount,
-            'items' => $items,
-        ]);
+    // kalau login: tampilkan broadcast + personal
+    if (auth()->check()) {
+        $q->where(function ($qq) {
+            $qq->whereNull('user_id')->orWhere('user_id', auth()->id());
+        });
+    } else {
+        // kalau tidak login: hanya broadcast
+        $q->whereNull('user_id');
     }
+
+    if ($onlyUnread) $q->where('is_read', false);
+
+    $items = $q->limit($limit)->get(['id','level','title','message','is_read','created_at']);
+
+    // unreadCount: guest gak punya konsep unread per user, jadi hitung broadcast unread saja
+    $unreadCountQ = SensorNotification::query()->where('is_read', false);
+
+    if (auth()->check()) {
+        $unreadCountQ->where(function ($qq) {
+            $qq->whereNull('user_id')->orWhere('user_id', auth()->id());
+        });
+    } else {
+        $unreadCountQ->whereNull('user_id');
+    }
+
+    $unreadCount = $unreadCountQ->count();
+
+    return response()->json([
+        'success' => true,
+        'unread_count' => $unreadCount,
+        'items' => $items,
+    ]);
+}
+
 
     public function markRead(Request $request)
     {
@@ -68,4 +74,20 @@ class NotificationController extends Controller
 
         return response()->json(['success' => true, 'updated' => $updated]);
     }
+    public function markAllRead(Request $request)
+{
+    if (!auth()->check()) {
+        return response()->json(['error' => 'Unauthenticated'], 401);
+    }
+
+    $updated = SensorNotification::query()
+        ->where(function ($qq) {
+            $qq->whereNull('user_id')->orWhere('user_id', auth()->id());
+        })
+        ->where('is_read', false)
+        ->update(['is_read' => true]);
+
+    return response()->json(['success' => true, 'updated' => $updated]);
+}
+
 }

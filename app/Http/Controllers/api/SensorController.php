@@ -18,6 +18,17 @@ class SensorController extends Controller
         $row = DB::table('sensor_readings')->orderByDesc('reading_time')->first();
 
         if (!$row) return response()->json(['exists' => false]);
+        $thresholds = [
+        'temp' => ['label'=>'Suhu',         'min'=>24,  'max'=>30,  'near_low'=>23,  'near_high'=>31,  'unit'=>'°C'],
+        'humi' => ['label'=>'Kelembapan',   'min'=>40,  'max'=>70,  'near_low'=>39,  'near_high'=>75,  'unit'=>'%'],
+        'ph'   => ['label'=>'pH Tanah',     'min'=>5.5, 'max'=>7.0, 'near_low'=>5.4, 'near_high'=>7.3, 'unit'=>''],
+
+        'ec'   => ['label'=>'EC',           'min'=>1000,'max'=>2500,'near_low'=>900, 'near_high'=>2700,'unit'=>'µS/cm'],
+        'n'    => ['label'=>'Nitrogen (N)', 'min'=>80,  'max'=>150, 'near_low'=>70,  'near_high'=>170, 'unit'=>'mg/kg'],
+        'p'    => ['label'=>'Fosfor (P)',   'min'=>35,  'max'=>60,  'near_low'=>30,  'near_high'=>75,  'unit'=>'mg/kg'],
+        'k'    => ['label'=>'Kalium (K)',   'min'=>60,  'max'=>120, 'near_low'=>55,  'near_high'=>150, 'unit'=>'mg/kg'],
+        ];
+
 
         return response()->json([
             'exists' => true,
@@ -75,6 +86,10 @@ class SensorController extends Controller
                 'ph' => $ph,
                 'soil_moisture' => $humi,
                 'soil_temp' => $temp,
+                'ec' => $ec,
+                'n' => $n,
+                'p' => $p,
+                'k' => $k,
             ]);
 
             return response()->json([
