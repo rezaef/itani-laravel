@@ -22,6 +22,10 @@
     }
     .sensor.ok{ border-color:#16a34a; }
     .sensor.warn{ border-color:#facc15; }
+    .sensor-card.danger{
+      border: 2px solid #ef4444;
+      box-shadow: 0 0 0 4px rgba(239,68,68,.15);
+    }
     .sensor h3{ font-size:.95rem; margin:0 0 6px; opacity:.95; display:flex; gap:.55rem; align-items:center; }
     .sensor .val{ font-size:1.75rem; font-weight:900; line-height:1.05; margin:0; }
     .sensor .unit{ font-size:.9rem; opacity:.8; margin-left:6px; }
@@ -235,9 +239,14 @@
   function setCardStatus(id, kind){
     const el = document.getElementById(id);
     if (!el) return;
-    el.classList.remove('ok','warn');
+
+    // bersihin semua status yang mungkin
+    el.classList.remove('ok','warn','danger');
+
+    // pasang status baru
     if (kind) el.classList.add(kind);
   }
+
   function toNum(v){ const n = Number(v); return Number.isFinite(n) ? n : null; }
 
   let mqttClient = null;
@@ -295,26 +304,67 @@
   }
 
   function updateSensorUI(data){
-    const ph = (typeof data.ph === "number") ? data.ph : toNum(data.ph);
-    const humi = (typeof data.humi === "number") ? data.humi : toNum(data.humi ?? data.moisture ?? data.soil_moisture);
-    const temp = (typeof data.temp === "number") ? data.temp : toNum(data.temp ?? data.temperature ?? data.soilTemp ?? data.soil_temp);
+  const ph   = (typeof data.ph === "number")   ? data.ph   : toNum(data.ph);
+  const humi = (typeof data.humi === "number") ? data.humi : toNum(data.humi ?? data.moisture ?? data.soil_moisture);
+  const temp = (typeof data.temp === "number") ? data.temp : toNum(data.temp ?? data.temperature ?? data.soilTemp ?? data.soil_temp);
 
-    const n = toNum(data.n), p = toNum(data.p), k = toNum(data.k), ec = toNum(data.ec);
+  const n  = toNum(data.n);
+  const p  = toNum(data.p);
+  const k  = toNum(data.k);
+  const ec = toNum(data.ec);
 
-    if (ph !== null){ phNumber.textContent = ph.toFixed(1); phLabel.textContent = (ph>=5.5 && ph<=7) ? "Kondisi optimal untuk okra merah" : "Perlu penyesuaian pH"; setCardStatus('card-ph', (ph>=5.5 && ph<=7) ? 'ok' : 'warn'); }
-    if (humi !== null){ humiNumber.textContent = humi.toFixed(1); humiLabel.textContent = (humi>=40 && humi<=70) ? "Kelembapan ideal" : "Di luar rentang ideal"; setCardStatus('card-humi', (humi>=40 && humi<=70) ? 'ok' : 'warn'); }
-    if (temp !== null){ tempNumber.textContent = temp.toFixed(1); tempLabel.textContent = (temp>=24 && temp<=30) ? "Suhu optimal" : "Suhu perlu dipantau"; setCardStatus('card-temp', (temp>=24 && temp<=30) ? 'ok' : 'warn'); }
+  // ===== Threshold (EC dalam µS/cm) =====
+  const TH = {
+    temp: { min:24,   max:30,   warnMin:23,   warnMax:31,   okText:"Suhu optimal",           warnText:"Suhu mendekati ambang", dangerText:"Suhu melewati ambang" },
+    humi: { min:40,   max:70,   warnMin:39,   warnMax:75,   okText:"Kelembapan ideal",      warnText:"Kelembapan mendekati ambang", dangerText:"Kelembapan melewati ambang" },
+    ph:   { min:5.5,  max:7.0,  warnMin:5.4,  warnMax:7.3,  okText:"Kondisi optimal pH",    warnText:"pH mendekati ambang", dangerText:"pH melewati ambang" },
 
-    if (n !== null){ nNumber.textContent = n.toFixed(0); nLabel.textContent = "Kadar N terukur"; }
-    if (p !== null){ pNumber.textContent = p.toFixed(0); pLabel.textContent = "Kadar P terukur"; }
-    if (k !== null){ kNumber.textContent = k.toFixed(0); kLabel.textContent = "Kadar K terukur"; }
-    if (ec !== null){ ecNumber.textContent = ec.toFixed(2); ecLabel.textContent = "EC terukur"; }
+    ec:   { min:180, max:250, warnMin:120,  warnMax:230, okText:"EC ideal",              warnText:"EC mendekati ambang", dangerText:"EC melewati ambang" },
+    n:    { min:80,   max:150,  warnMin:70,   warnMax:170,  okText:"Kadar N normal",        warnText:"N mendekati ambang",  dangerText:"N melewati ambang" },
+    p:    { min:35,   max:60,   warnMin:30,   warnMax:75,   okText:"Kadar P normal",        warnText:"P mendekati ambang",  dangerText:"P melewati ambang" },
+    k:    { min:60,   max:120,  warnMin:55,   warnMax:150,  okText:"Kadar K normal",        warnText:"K mendekati ambang",  dangerText:"K melewati ambang" },
+  };
 
-    if (ph !== null && humi !== null && temp !== null){
-      addSensorPoint({ ph, humi, temp, n, p, k, ec });
-    }
-    lastUpdate.textContent = "Last update: " + new Date().toLocaleString("id-ID");
+  function evalLevel(key, val){
+    if (val === null || Number.isNaN(val)) return { level: 'ok', text: '' };
+    const t = TH[key];
+    if (!t) return { level: 'ok', text: '' };
+
+    if (val < t.min || val > t.max) return { level: 'danger', text: t.dangerText };
+    if (val <= t.warnMin || val >= t.warnMax) return { level: 'warn', text: t.warnText };
+    return { level: 'ok', text: t.okText };
   }
+
+  // helper apply
+  function apply(key, val, numberEl, labelEl, cardId, fmt){
+    if (val === null) return;
+    numberEl.textContent = fmt(val);
+    const s = evalLevel(key, val);
+    if (s.text) labelEl.textContent = s.text;
+
+    // mapping class existing kamu: ok/warn. Kita tambahin 'danger' (buat lebih tegas)
+    if (s.level === 'danger') setCardStatus(cardId, 'danger');
+    else if (s.level === 'warn') setCardStatus(cardId, 'warn');
+    else setCardStatus(cardId, 'ok');
+  }
+
+  // === Apply semua card ===
+  apply('temp', temp, tempNumber, tempLabel, 'card-temp', v => v.toFixed(1));
+  apply('humi', humi, humiNumber, humiLabel, 'card-humi', v => v.toFixed(1));
+  apply('ph',   ph,   phNumber,   phLabel,   'card-ph',   v => v.toFixed(1));
+
+  apply('n',  n,  nNumber,  nLabel,  'card-n',  v => v.toFixed(0));
+  apply('p',  p,  pNumber,  pLabel,  'card-p',  v => v.toFixed(0));
+  apply('k',  k,  kNumber,  kLabel,  'card-k',  v => v.toFixed(0));
+  apply('ec', ec, ecNumber, ecLabel, 'card-ec', v => v.toFixed(2));
+
+  // Chart tetap jalan meski ada null
+  if (ph !== null && humi !== null && temp !== null){
+    addSensorPoint({ ph, humi, temp, n, p, k, ec });
+  }
+
+  lastUpdate.textContent = "Last update: " + new Date().toLocaleString("id-ID");
+}
 
   function fmtLogTime(s){
     if (!s) return { date: "-", time: "-" };
@@ -330,6 +380,25 @@
       time: d.toLocaleTimeString("id-ID", { hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false }),
     };
   }
+
+  document.getElementById('btnMarkRead')?.addEventListener('click', async () => {
+  const res = await fetch('/api/notifications/mark-all-read', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Accept': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    }
+  });
+
+  const j = await res.json();
+  console.log('markAllRead:', j);
+
+  // refresh notif & badge
+  if (typeof loadNotifications === 'function') {
+    loadNotifications();
+  }
+});
 
   function renderLogList(logs){
     logList.innerHTML = "";

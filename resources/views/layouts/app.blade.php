@@ -7,6 +7,7 @@
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
 
   <style>
     :root{
@@ -87,6 +88,21 @@
 
     /* placeholder follow theme */
     .form-control::placeholder{ color: rgba(100,116,139,.85); opacity: 1; }
+    /* base: kalau card kamu pakai id card-xxx */
+    #card-temp.warn, #card-humi.warn, #card-ph.warn, #card-n.warn, #card-p.warn, #card-k.warn, #card-ec.warn{
+      border: 2px solid #fbbf24;               /* kuning */
+      box-shadow: 0 0 0 4px rgba(251,191,36,.18);
+    }
+
+    #card-temp.ok, #card-humi.ok, #card-ph.ok, #card-n.ok, #card-p.ok, #card-k.ok, #card-ec.ok{
+      border: 2px solid rgba(34,197,94,.55);   /* hijau tipis */
+      box-shadow: none;
+    }
+
+    #card-temp.danger, #card-humi.danger, #card-ph.danger, #card-n.danger, #card-p.danger, #card-k.danger, #card-ec.danger{
+      border: 2px solid #ef4444;               /* merah */
+      box-shadow: 0 0 0 4px rgba(239,68,68,.15);
+    }
 
   </style>
 
@@ -155,7 +171,7 @@
             <li><hr class="dropdown-divider my-0"></li>
             <li class="px-2 py-2 d-flex justify-content-between align-items-center">
               <small class="text-muted" id="notifUpdated">–</small>
-              <button class="btn btn-sm btn-outline-secondary" id="btnNotifMarkAll">Tandai dibaca</button>
+              <button class="btn btn-sm btn-outline-secondary" id="btnMarkRead">Tandai dibaca</button>
             </li>
           </ul>
         </div>
@@ -201,6 +217,7 @@
   const btnNotifMarkAll = document.getElementById('btnNotifMarkAll');
   const toastHost = document.getElementById('toastHost');
 
+
   let lastNotifIds = new Set();
   let latestBatchIds = [];
 
@@ -211,6 +228,25 @@
     if (level === 'warning') return '<span class="badge text-bg-warning text-dark me-2">Warning</span>';
     return '<span class="badge text-bg-secondary me-2">Info</span>';
   }
+
+  document.getElementById('btnMarkRead')?.addEventListener('click', async () => {
+  const res = await fetch('/api/notifications/mark-all-read', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Accept': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    }
+  });
+
+  const j = await res.json();
+  console.log('markAllRead:', j);
+
+  // refresh notif & badge
+  if (typeof loadNotifications === 'function') {
+    loadNotifications();
+  }
+});
 
   function renderNotifs(items){
     if (!items || items.length === 0){
