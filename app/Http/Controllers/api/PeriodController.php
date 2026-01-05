@@ -16,15 +16,17 @@ class PeriodController extends Controller
         return null;
     }
 
+    /**
+     * Catatan perubahan (global access):
+     * - Semua user (Admin/Petani) bisa melihat & mengelola data periode.
+     * - Kolom user_id tetap diisi (audit siapa pembuat), tapi tidak lagi dipakai untuk filter akses.
+     */
     public function index()
     {
         if ($g = $this->guard()) return $g;
 
-        $user = auth()->user();
-        $role = $user->role ?? 'Petani';
-
         try {
-            $base = DB::table('periods')
+            $rows = DB::table('periods')
                 ->select(
                     'periods.id',
                     'periods.user_id',
@@ -35,21 +37,15 @@ class PeriodController extends Controller
                     'periods.status',
                     'periods.created_at',
                     'periods.updated_at',
-                    //'periods.is_active'
                 )
-                // hitung panen per periode
+                // hitung jumlah panen per periode
                 ->selectSub(function ($q) {
                     $q->from('harvests')
                       ->selectRaw('COUNT(*)')
                       ->whereColumn('harvests.periode_id', 'periods.id');
                 }, 'harvest_count')
-                ->orderByDesc('periods.tanggal_mulai');
-
-            if ($role !== 'Admin') {
-                $base->where('periods.user_id', $user->id);
-            }
-
-            $rows = $base->get();
+                ->orderByDesc('periods.tanggal_mulai')
+                ->get();
 
             return response()->json(['success' => true, 'data' => $rows]);
         } catch (\Throwable $e) {
@@ -62,32 +58,11 @@ class PeriodController extends Controller
         if ($g = $this->guard()) return $g;
 
         $user = auth()->user();
-        $role = $user->role ?? 'Petani';
 
         $input = $request->json()->all();
         if (!is_array($input)) return response()->json(['success' => false, 'error' => 'Invalid JSON'], 400);
 
         $action = $input['action'] ?? 'create';
-
-        // --- set_active ---
-        // if ($action === 'set_active') {
-        //     $id = (int)($input['id'] ?? 0);
-        //     if ($id <= 0) return response()->json(['success'=>false,'error'=>'ID tidak valid'], 400);
-
-        //     try {
-        //         if ($role === 'Admin') {
-        //             DB::table('periods')->update(['is_active' => 0]);
-        //             DB::table('periods')->where('id', $id)->update(['is_active' => 1, 'status' => 'berjalan']);
-        //         } else {
-        //             DB::table('periods')->where('user_id', $user->id)->update(['is_active' => 0]);
-        //             DB::table('periods')->where('id', $id)->where('user_id', $user->id)
-        //                 ->update(['is_active' => 1, 'status' => 'berjalan']);
-        //         }
-        //         return response()->json(['success' => true]);
-        //     } catch (\Throwable $e) {
-        //         return response()->json(['success'=>false,'error'=>'DB error (SET_ACTIVE)','detail'=>$e->getMessage()], 500);
-        //     }
-        // }
 
         // --- update_status ---
         if ($action === 'update_status') {
@@ -99,10 +74,7 @@ class PeriodController extends Controller
             }
 
             try {
-                $q = DB::table('periods')->where('id', $id);
-                if ($role !== 'Admin') $q->where('user_id', $user->id);
-                $q->update(['status' => $status]);
-
+                DB::table('periods')->where('id', $id)->update(['status' => $status]);
                 return response()->json(['success' => true]);
             } catch (\Throwable $e) {
                 return response()->json(['success'=>false,'error'=>'DB error (UPDATE_STATUS)','detail'=>$e->getMessage()], 500);
@@ -115,13 +87,10 @@ class PeriodController extends Controller
             if ($id <= 0) return response()->json(['success'=>false,'error'=>'ID tidak valid'], 400);
 
             try {
-                $q = DB::table('periods')->where('id', $id);
-                if ($role !== 'Admin') $q->where('user_id', $user->id);
-
-                // ✅ optional: hapus panen yang terkait biar DB bersih
+                // hapus panen terkait biar DB bersih
                 DB::table('harvests')->where('periode_id', $id)->delete();
 
-                $q->delete();
+                DB::table('periods')->where('id', $id)->delete();
 
                 return response()->json(['success' => true]);
             } catch (\Throwable $e) {
@@ -149,10 +118,7 @@ class PeriodController extends Controller
                 $id = (int)($input['id'] ?? 0);
                 if ($id <= 0) return response()->json(['success'=>false,'error'=>'ID tidak valid'], 400);
 
-                $q = DB::table('periods')->where('id', $id);
-                if ($role !== 'Admin') $q->where('user_id', $user->id);
-
-                $q->update([
+                DB::table('periods')->where('id', $id)->update([
                     'nama_periode' => $nama,
                     'tanggal_mulai' => $mulai,
                     'tanggal_selesai' => $selesai ?: null,
@@ -164,7 +130,7 @@ class PeriodController extends Controller
             }
 
             $id = DB::table('periods')->insertGetId([
-                'user_id' => $user->id,
+                'user_id' => $user?->id, // audit
                 'nama_periode' => $nama,
                 'tanggal_mulai' => $mulai,
                 'tanggal_selesai' => $selesai ?: null,

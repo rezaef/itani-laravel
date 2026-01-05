@@ -29,11 +29,16 @@ class StockController extends Controller
         abort(response()->json(['success' => false, 'error' => 'Unauthorized'], 401));
     }
 
+    /**
+     * Catatan perubahan (global access):
+     * - Admin/Petani tidak dibedakan pada modul stok.
+     * - Hanya modul kelola user yang dibatasi Admin.
+     */
+
     // ===================== SEED =====================
     public function seeds(Request $request)
     {
         $user = $this->sessionUser($request);
-        $isAdmin = strtolower($user['role'] ?? '') === 'admin';
 
         if ($request->isMethod('get')) {
             $rows = DB::table('seed_stock')
@@ -53,11 +58,6 @@ class StockController extends Controller
         }
 
         $action = $request->input('action');
-
-        // hanya Admin untuk create/update/delete
-        if (in_array($action, ['create', 'update', 'delete'], true) && !$isAdmin) {
-            return response()->json(['success' => false, 'error' => 'Forbidden'], 403);
-        }
 
         if ($action === 'create') {
             $data = $request->validate([
@@ -112,11 +112,6 @@ class StockController extends Controller
                 'period_id' => 'nullable|integer|min:1',
                 'notes'     => 'nullable|string|max:255',
             ]);
-
-            // Non-admin: hanya boleh OUT (delta negatif)
-            if (!$isAdmin && (int)$data['delta'] > 0) {
-                return response()->json(['success' => false, 'error' => 'Petani hanya boleh OUT (delta negatif)'], 403);
-            }
 
             DB::transaction(function () use ($data, $user) {
                 $row = DB::table('seed_stock')
@@ -187,7 +182,6 @@ class StockController extends Controller
     public function fertilizers(Request $request)
     {
         $user = $this->sessionUser($request);
-        $isAdmin = strtolower($user['role'] ?? '') === 'admin';
 
         if ($request->isMethod('get')) {
             $rows = DB::table('fertilizer_stock')
@@ -207,11 +201,6 @@ class StockController extends Controller
         }
 
         $action = $request->input('action');
-
-        // pupuk: batasi admin untuk CRUD dan adjust (biar konsisten)
-        if (!$isAdmin) {
-            return response()->json(['success' => false, 'error' => 'Forbidden'], 403);
-        }
 
         if ($action === 'create') {
             $data = $request->validate([

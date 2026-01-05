@@ -32,9 +32,7 @@
 
             <div class="d-flex align-items-center gap-2">
               <span id="seedStatus" class="badge text-bg-secondary">Loading...</span>
-              @if($role === 'Admin')
-                <button class="btn btn-success btn-sm" onclick="openSeedModal()">Tambah Bibit</button>
-              @endif
+              <button class="btn btn-success btn-sm" onclick="openSeedModal()">Tambah Bibit</button>
             </div>
           </div>
 
@@ -58,7 +56,7 @@
 
           <div class="d-flex justify-content-between align-items-center mb-2">
             <div class="fw-semibold">Transaksi Bibit</div>
-            <div class="text-muted small">Restok (+) / Pakai (-). Petani hanya boleh pakai.</div>
+            <div class="text-muted small">Restok (+) / Pakai (-).</div>
           </div>
 
           <form class="row g-2" onsubmit="return submitSeedAdjust(event)">
@@ -105,9 +103,7 @@
 
             <div class="d-flex align-items-center gap-2">
               <span id="fertStatus" class="badge text-bg-secondary">Loading...</span>
-              @if($role === 'Admin')
-                <button class="btn btn-success btn-sm" onclick="openFertModal()">Tambah Pupuk</button>
-              @endif
+              <button class="btn btn-success btn-sm" onclick="openFertModal()">Tambah Pupuk</button>
             </div>
           </div>
 
@@ -128,10 +124,6 @@
           </div>
 
           <hr class="my-3">
-
-          @if($role !== 'Admin')
-            <div class="text-muted small">Transaksi pupuk dibatasi untuk Admin.</div>
-          @else
             <div class="d-flex justify-content-between align-items-center mb-2">
               <div class="fw-semibold">Transaksi Pupuk</div>
               <div class="text-muted small">Restok (+) / Pakai (-)</div>
@@ -158,7 +150,6 @@
                 <input type="text" class="form-control" id="fertAdjustNotes" placeholder="Contoh: Restok 5kg / Pemupukan bedeng B">
               </div>
             </form>
-          @endif
         </div>
       </div>
     </div>
@@ -339,19 +330,13 @@
       } else {
         tbody.innerHTML = seedCache.map(s => {
           const btnLogs = `<button class="btn btn-outline-secondary btn-sm" onclick="openLogs('seed', ${s.id}, '${esc(s.name)}')">Riwayat</button>`;
-          const btnEdit = (ROLE === 'Admin')
-            ? `<button class="btn btn-outline-primary btn-sm" onclick="openSeedModal(${s.id})">Edit</button>
-               <button class="btn btn-outline-danger btn-sm" onclick="deleteSeed(${s.id})">Hapus</button>`
-            : ``;
+          const btnEdit = `<button class="btn btn-outline-primary btn-sm" onclick="openSeedModal(${s.id})">Edit</button>
+               <button class="btn btn-outline-danger btn-sm" onclick="deleteSeed(${s.id})">Hapus</button>`;
 
           // quick IN/OUT
-          const btnQuick =
-            (ROLE === 'Admin')
-            ? `<button class="btn btn-outline-success btn-sm" onclick="quickSeed(${s.id}, 1)">+1</button>`
-            : ``;
+          const btnQuick = `<button class="btn btn-outline-success btn-sm" onclick="quickSeed(${s.id}, 1)">+1</button>`;
 
-          const btnUse =
-            `<button class="btn btn-outline-danger btn-sm" onclick="quickSeed(${s.id}, -1)">-1</button>`;
+          const btnUse = `<button class="btn btn-outline-danger btn-sm" onclick="quickSeed(${s.id}, -1)">-1</button>`;
 
           return `
             <tr>
@@ -478,10 +463,9 @@
       } else {
         tbody.innerHTML = fertCache.map(f => {
           const btnLogs = `<button class="btn btn-outline-secondary btn-sm" onclick="openLogs('fert', ${f.id}, '${esc(f.name)}')">Riwayat</button>`;
-          const btnEdit = (ROLE === 'Admin')
-            ? `<button class="btn btn-outline-primary btn-sm" onclick="openFertModal(${f.id})">Edit</button>
+          const btnEdit = `<button class="btn btn-outline-primary btn-sm" onclick="openFertModal(${f.id})">Edit</button>
                <button class="btn btn-outline-danger btn-sm" onclick="deleteFert(${f.id})">Hapus</button>`
-            : ``;
+            
 
           return `
             <tr>
