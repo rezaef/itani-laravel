@@ -526,7 +526,7 @@
 
     const options = {
       timeout: 5,
-      useSSL: false,
+      useSSL: (Number(MQTT_CFG.port) === 8884),
       onSuccess: () => {
         setMQTTStatus(true);
         mqttClient.subscribe(TOPIC.sensor);
