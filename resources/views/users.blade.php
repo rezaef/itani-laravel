@@ -68,7 +68,6 @@
               <select class="form-select" id="role">
                 <option value="Admin">Admin</option>
                 <option value="Petani">Petani</option>
-                <option value="Viewer">Viewer</option>
               </select>
             </div>
             <div class="col-md-8">

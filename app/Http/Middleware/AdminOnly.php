@@ -11,9 +11,27 @@ class AdminOnly
     {
         $user = auth()->user();
 
-        // sesuaikan kalau auth kamu custom
-        if (!$user || ($user->role ?? null) !== 'admin') {
-            abort(403, 'Admin only');
+        // 1) Belum login
+        if (!$user) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'Unauthorized',
+                ], 401);
+            }
+            return redirect('/login.html');
+        }
+
+        // 2) Sudah login tapi bukan admin
+        $role = strtolower((string)($user->role ?? ''));
+        if ($role !== 'admin') {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'Forbidden (admin only)',
+                ], 403);
+            }
+            return redirect('/index.php');
         }
 
         return $next($request);

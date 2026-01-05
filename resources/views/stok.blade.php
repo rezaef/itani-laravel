@@ -31,7 +31,6 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
-              <span id="seedStatus" class="badge text-bg-secondary">Loading...</span>
               <button class="btn btn-success btn-sm" onclick="openSeedModal()">Tambah Bibit</button>
             </div>
           </div>
@@ -102,7 +101,6 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
-              <span id="fertStatus" class="badge text-bg-secondary">Loading...</span>
               <button class="btn btn-success btn-sm" onclick="openFertModal()">Tambah Pupuk</button>
             </div>
           </div>
@@ -300,12 +298,6 @@
     return j;
   }
 
-  function setBadge(elId, ok, text){
-    const el = document.getElementById(elId);
-    el.className = 'badge ' + (ok ? 'text-bg-success' : 'text-bg-danger');
-    el.textContent = text;
-  }
-
   // ===== LOAD PERIODS (optional) =====
   async function loadPeriods(){
     try {
@@ -322,7 +314,6 @@
   async function loadSeeds(){
     try {
       seedCache = await apiGet(API_SEEDS);
-      //setBadge('seedStatus', true, 'Aktif');
 
       const tbody = document.getElementById('seedTbody');
       if (!seedCache.length){
@@ -360,8 +351,7 @@
       const sel = document.getElementById('seedAdjustId');
       sel.innerHTML = seedCache.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
     } catch(e){
-      setBadge('seedStatus', false, 'Error');
-      document.getElementById('seedTbody').innerHTML =
+document.getElementById('seedTbody').innerHTML =
         `<tr><td colspan="4" class="text-center text-danger py-4">${esc(e.message)}</td></tr>`;
     }
   }
@@ -455,7 +445,6 @@
   async function loadFerts(){
     try {
       fertCache = await apiGet(API_FERTS);
-      //setBadge('fertStatus', true, 'Aktif');
 
       const tbody = document.getElementById('fertTbody');
       if (!fertCache.length){
@@ -486,8 +475,7 @@
       const sel = document.getElementById('fertAdjustId');
       if (sel) sel.innerHTML = fertCache.map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('');
     } catch(e){
-      setBadge('fertStatus', false, 'Error');
-      document.getElementById('fertTbody').innerHTML =
+document.getElementById('fertTbody').innerHTML =
         `<tr><td colspan="4" class="text-center text-danger py-4">${esc(e.message)}</td></tr>`;
     }
   }

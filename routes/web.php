@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PageController;
+use App\Http\Middleware\AdminOnly;
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SensorController;
@@ -21,7 +22,7 @@ Route::view('/login.html', 'login');
 // pages
 Route::get('/index.php', [DashboardController::class, 'index']);
 Route::get('/periode.php', [PageController::class, 'periode']);
-Route::get('/users.php', [PageController::class, 'users']);
+Route::get('/users.php', [PageController::class, 'users'])->middleware(AdminOnly::class);
 Route::get('/stok.php', [PageController::class, 'stok']);
 Route::get('/panen.php', [PageController::class, 'panen']);
 
@@ -57,8 +58,10 @@ Route::delete('/api/harvests.php/{id}', [HarvestController::class, 'destroy']);
 Route::match(['GET','POST'], 'api/seed_stock.php', [StockController::class, 'seeds']);
 Route::match(['GET','POST'], 'api/fertilizer_stock.php', [StockController::class, 'fertilizers']);
 
-// users legacy
-Route::get('/api/users.php', [UserController::class, 'index']);
-Route::post('/api/users.php', [UserController::class, 'store']);
-Route::match(['put','patch'], '/api/users.php', [UserController::class, 'update']);
-Route::delete('/api/users.php', [UserController::class, 'destroy']);
+// users legacy (ADMIN ONLY)
+Route::middleware([AdminOnly::class])->group(function () {
+    Route::get('/api/users.php', [UserController::class, 'index']);
+    Route::post('/api/users.php', [UserController::class, 'store']);
+    Route::match(['put','patch'], '/api/users.php', [UserController::class, 'update']);
+    Route::delete('/api/users.php', [UserController::class, 'destroy']);
+});

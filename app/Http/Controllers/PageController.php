@@ -21,6 +21,10 @@ class PageController extends Controller
     public function users()
     {
         if ($r = $this->requireLogin()) return $r;
+
+        $role = strtolower((string)(auth()->user()->role ?? ''));
+        if ($role !== 'admin') return redirect('/index.php');
+
         return view('users');
     }
 

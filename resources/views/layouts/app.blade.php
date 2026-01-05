@@ -114,6 +114,7 @@
   $u = auth()->user();
   $name = $u?->name ?? 'Admin';
   $username = $u?->username ?? 'admin';
+  $role = strtolower((string)($u?->role ?? "petani"));
   $initial = strtoupper(mb_substr($name, 0, 1));
   $path = request()->path();
 @endphp
@@ -140,9 +141,11 @@
         <li class="nav-item">
           <a class="nav-link {{ str_ends_with($path,'stok.php') ? 'active' : '' }}" href="/stok.php">Stok Bibit &amp; Pupuk</a>
         </li>
+        @if($role === 'admin')
         <li class="nav-item">
           <a class="nav-link {{ str_ends_with($path,'users.php') ? 'active' : '' }}" href="/users.php">Kelola User</a>
         </li>
+        @endif
       </ul>
 
       <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0">
