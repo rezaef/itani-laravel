@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\HarvestController;
 use App\Http\Controllers\Api\StockController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\ReportController;
 
 
 Route::get('/', fn() => redirect('/index.php'));
@@ -54,6 +55,8 @@ Route::get('/api/harvests.php', [HarvestController::class, 'index']);
 Route::post('/api/harvests.php', [HarvestController::class, 'store']);
 Route::put('/api/harvests.php/{id}', [HarvestController::class, 'update']);
 Route::delete('/api/harvests.php/{id}', [HarvestController::class, 'destroy']);
+Route::get('/api/harvest_report.csv', [ReportController::class, 'harvestCsv']);
+
 
 Route::match(['GET','POST'], 'api/seed_stock.php', [StockController::class, 'seeds']);
 Route::match(['GET','POST'], 'api/fertilizer_stock.php', [StockController::class, 'fertilizers']);
