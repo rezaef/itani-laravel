@@ -34,6 +34,7 @@ Route::get('/api/logout.php', [AuthController::class, 'logout']);
 // sensor legacy
 Route::post('/api/sensors_insert.php', [SensorController::class, 'insert']);
 Route::get('/api/sensors_latest.php', [SensorController::class, 'latest']);
+Route::get('/api/sensors_history.php', [SensorController::class, 'history']);
 
 // watering legacy
 Route::get('/api/watering_logs.php', [WateringLogController::class, 'index']);

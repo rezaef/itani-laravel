@@ -210,6 +210,10 @@
   const MQTT_CFG = @json($mqtt);
   const TOPIC = @json($topics);
 
+  // ===== Chart history (server-side, biar tidak reset saat refresh) =====
+  const SENSOR_HISTORY = @json($history ?? []);
+  const MAX_POINTS = @json($limit ?? 20);
+
   const mqttStatus = document.getElementById("mqttStatus");
   const pumpStatus = document.getElementById("pumpStatus");
   const btnTogglePump = document.getElementById("btnTogglePump");
@@ -266,6 +270,44 @@
   const chartLabels = [];
   const series = { ph:[], humi:[], temp:[], n:[], p:[], k:[], ec:[] };
 
+  let lastChartTs = null; // "YYYY-MM-DD HH:MM:SS"
+
+  function normTs(ts){
+    if (!ts) return null;
+    ts = String(ts);
+    if (ts.length >= 19) {
+      const t19 = ts.substring(0, 19);
+      return t19.replace('T', ' ');
+    }
+    return ts;
+  }
+
+  function tsToLabel(ts){
+    const t = normTs(ts);
+    if (!t) return new Date().toLocaleTimeString("id-ID", { hour12:false });
+    // ambil HH:MM:SS kalau format lengkap
+    if (t.length >= 19) return t.substring(11, 19);
+    return t;
+  }
+
+  // isi data awal dari database (seperti versi JSP)
+  try {
+    if (Array.isArray(SENSOR_HISTORY)) {
+      for (const item of SENSOR_HISTORY) {
+        const ts = normTs(item.time);
+        chartLabels.push(tsToLabel(ts));
+        series.ph.push(toNum(item.ph));
+        series.humi.push(toNum(item.humi));
+        series.temp.push(toNum(item.temp));
+        series.n.push(toNum(item.n));
+        series.p.push(toNum(item.p));
+        series.k.push(toNum(item.k));
+        series.ec.push(toNum(item.ec));
+        if (ts) lastChartTs = ts;
+      }
+    }
+  } catch (e) { /* ignore */ }
+
   const ctx = document.getElementById("sensorChart").getContext("2d");
   const sensorChart = new Chart(ctx, {
     type: "line",
@@ -285,8 +327,11 @@
   });
 
   function addSensorPoint(d){
-    const label = new Date().toLocaleTimeString("id-ID", { hour12:false });
-    chartLabels.push(label);
+    const ts = normTs(d.time);
+    // kalau ada timestamp dari DB, cegah duplikasi saat refresh / latest()
+    if (ts && lastChartTs && ts <= lastChartTs) return;
+
+    chartLabels.push(tsToLabel(ts));
     series.ph.push(toNum(d.ph));
     series.humi.push(toNum(d.humi));
     series.temp.push(toNum(d.temp));
@@ -295,11 +340,12 @@
     series.k.push(toNum(d.k));
     series.ec.push(toNum(d.ec));
 
-    const maxPoints = 40;
-    if (chartLabels.length > maxPoints){
+    while (chartLabels.length > MAX_POINTS){
       chartLabels.shift();
       Object.values(series).forEach(arr => arr.shift());
     }
+
+    if (ts) lastChartTs = ts;
     sensorChart.update();
   }
 
@@ -360,7 +406,7 @@
 
   // Chart tetap jalan meski ada null
   if (ph !== null && humi !== null && temp !== null){
-    addSensorPoint({ ph, humi, temp, n, p, k, ec });
+    addSensorPoint({ ph, humi, temp, n, p, k, ec, time: (data.time ?? data.reading_time ?? null) });
   }
 
   lastUpdate.textContent = "Last update: " + new Date().toLocaleString("id-ID");

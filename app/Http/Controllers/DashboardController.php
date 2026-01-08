@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -25,6 +26,35 @@ class DashboardController extends Controller
             'auto_mode' => env('MQTT_TOPIC_AUTO_MODE', 'okra/pump/autoMode'),
         ];
 
-        return view('dashboard', compact('mqtt', 'topics'));
+        // Chart history limit: user minta maksimal 10 atau 20
+        $limit = (int) $request->query('chartLimit', 20);
+        if (!in_array($limit, [10, 20], true)) $limit = 20;
+
+        // Server-side initial history (seperti versi JSP)
+        $history = [];
+        try {
+            $rows = DB::table('sensor_readings')
+                ->orderByDesc('reading_time')
+                ->limit($limit)
+                ->get();
+
+            $history = $rows->reverse()->values()->map(function ($row) {
+                return [
+                    'time' => $row->reading_time,
+                    'ph'   => $row->ph !== null ? (float) $row->ph : null,
+                    'humi' => $row->soil_moisture !== null ? (float) $row->soil_moisture : null,
+                    'temp' => $row->soil_temp !== null ? (float) $row->soil_temp : null,
+                    'ec'   => $row->ec !== null ? (float) $row->ec : null,
+                    'n'    => $row->n !== null ? (int) $row->n : null,
+                    'p'    => $row->p !== null ? (int) $row->p : null,
+                    'k'    => $row->k !== null ? (int) $row->k : null,
+                ];
+            })->all();
+        } catch (\Throwable $e) {
+            // jika tabel belum ada / error, dashboard tetap jalan
+            $history = [];
+        }
+
+        return view('dashboard', compact('mqtt', 'topics', 'history', 'limit'));
     }
 }

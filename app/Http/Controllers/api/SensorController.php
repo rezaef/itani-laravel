@@ -43,7 +43,45 @@ class SensorController extends Controller
         ]);
     }
 
-    public function insert(Request $request)
+    
+
+    public function history(Request $request)
+    {
+        $limit = (int) $request->query('limit', 20);
+        if ($limit <= 0) $limit = 20;
+        if ($limit > 50) $limit = 50;
+
+        $rows = DB::table('sensor_readings')
+            ->orderByDesc('reading_time')
+            ->limit($limit)
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return response()->json(['exists' => false, 'items' => []]);
+        }
+
+        // balikkan jadi urutan lama -> baru
+        $items = $rows->reverse()->values()->map(function ($row) {
+            return [
+                'ph'   => $row->ph !== null ? (float)$row->ph : null,
+                'humi' => $row->soil_moisture !== null ? (float)$row->soil_moisture : null,
+                'temp' => $row->soil_temp !== null ? (float)$row->soil_temp : null,
+                'ec'   => $row->ec !== null ? (float)$row->ec : null,
+                'n'    => $row->n !== null ? (int)$row->n : null,
+                'p'    => $row->p !== null ? (int)$row->p : null,
+                'k'    => $row->k !== null ? (int)$row->k : null,
+                'time' => $row->reading_time,
+            ];
+        });
+
+        return response()->json([
+            'exists' => true,
+            'limit'  => $limit,
+            'items'  => $items,
+        ]);
+    }
+
+public function insert(Request $request)
     {
         $input = $request->json()->all();
         if (!is_array($input)) {

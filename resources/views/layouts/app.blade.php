@@ -217,14 +217,21 @@
   const notifList = document.getElementById('notifList');
   const notifUpdated = document.getElementById('notifUpdated');
   const btnNotif = document.getElementById('btnNotif');
-  const btnNotifMarkAll = document.getElementById('btnNotifMarkAll');
   const toastHost = document.getElementById('toastHost');
 
 
-  let lastNotifIds = new Set();
-  let latestBatchIds = [];
+  // id -> last_triggered_at (untuk deteksi notifikasi "kejadian baru" tanpa spam)
+  let lastTriggeredMap = new Map();
+  let notifInitialized = false;
 
   function esc(s){ return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+
+  function fmtTime(v){
+    if (!v) return '–';
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return esc(v);
+    return d.toLocaleString('id-ID');
+  }
 
   function levelBadge(level){
     if (level === 'danger') return '<span class="badge text-bg-danger me-2">Danger</span>';
@@ -233,7 +240,8 @@
   }
 
   document.getElementById('btnMarkRead')?.addEventListener('click', async () => {
-  const res = await fetch('/api/notifications/mark-all-read', {
+  // Mark ALL unread (termasuk yang tidak tampil karena ketimpa/limit)
+  const res = await fetch('/notifications/mark-all-read', {
     method: 'POST',
     credentials: 'same-origin',
     headers: {
@@ -246,9 +254,7 @@
   console.log('markAllRead:', j);
 
   // refresh notif & badge
-  if (typeof loadNotifications === 'function') {
-    loadNotifications();
-  }
+  await fetchNotifs();
 });
 
   function renderNotifs(items){
@@ -259,14 +265,16 @@
     notifList.innerHTML = items.map(n => {
       const isUnread = !n.is_read;
       const bg = isUnread ? 'rgba(34,197,94,.10)' : 'transparent';
+      const occ = Number(n.occurrences || 1);
+      const occHtml = occ > 1 ? `<span class="badge text-bg-light text-dark ms-2">x${occ}</span>` : '';
       return `
         <div class="px-2 py-2" style="border-bottom:1px solid rgba(15,23,42,.08); background:${bg}; border-radius:12px; margin:.35rem 0;">
           <div class="d-flex align-items-start gap-2">
             <div style="padding-top:2px">${levelBadge(n.level)}</div>
             <div class="flex-grow-1">
-              <div class="fw-bold" style="font-size:.92rem">${esc(n.title)}</div>
+              <div class="fw-bold" style="font-size:.92rem">${esc(n.title)}${occHtml}</div>
               <div class="text-muted" style="font-size:.86rem">${esc(n.message)}</div>
-              <div class="text-muted" style="font-size:.75rem; margin-top:4px">${esc(n.created_at)}</div>
+              <div class="text-muted" style="font-size:.75rem; margin-top:4px">${fmtTime(n.updated_at || n.created_at)}</div>
             </div>
           </div>
         </div>
@@ -317,44 +325,42 @@
       }
 
       const items = data.items || [];
-      latestBatchIds = items.map(x => x.id);
       renderNotifs(items);
       notifUpdated.textContent = 'Update: ' + new Date().toLocaleString('id-ID');
 
-      // Toast untuk notifikasi baru (yang belum pernah tampil)
+      // Toast untuk "kejadian baru" berdasarkan last_triggered_at
       for (const n of items){
-        if (!lastNotifIds.has(n.id) && !n.is_read){
+        const trig = n.last_triggered_at || null;
+        if (!trig) continue;
+
+        const prev = lastTriggeredMap.get(n.id);
+
+        // saat pertama kali load, cukup simpan state (jangan spam toast)
+        if (!notifInitialized){
+          lastTriggeredMap.set(n.id, trig);
+          continue;
+        }
+
+        if (!n.is_read && prev !== trig){
           showToast(n.title, n.message, n.level);
         }
+        lastTriggeredMap.set(n.id, trig);
       }
-      lastNotifIds = new Set(items.map(x => x.id));
+
+      notifInitialized = true;
+
+      // sync map: buang id yang sudah tidak ada di batch
+      const keep = new Set(items.map(x => x.id));
+      for (const id of Array.from(lastTriggeredMap.keys())){
+        if (!keep.has(id)) lastTriggeredMap.delete(id);
+      }
     }catch(e){
       // ignore
     }
   }
 
-  async function markAllRead(){
-    if (!latestBatchIds || latestBatchIds.length === 0) return;
-    try{
-      await fetch('/api/notifications.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: latestBatchIds })
-      });
-    }catch(e){}
-  }
-
   if (btnNotif){
-    // saat dropdown dibuka, langsung tandai yang tampil sebagai read
     btnNotif.addEventListener('shown.bs.dropdown', async () => {
-      await markAllRead();
-      await fetchNotifs();
-    });
-  }
-  if (btnNotifMarkAll){
-    btnNotifMarkAll.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await markAllRead();
       await fetchNotifs();
     });
   }
